@@ -297,8 +297,8 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                          </Button>
                        )}
                     </div>
-                    <CollapsibleContent asChild>
-                        <CardContent className="grid md:grid-cols-2 gap-8 p-6 pt-0">
+                    <CollapsibleContent>
+                        <div className="grid md:grid-cols-2 gap-8 p-6 pt-0">
                             <div className="space-y-6">
                                 <Card>
                                     <CardHeader><CardTitle className="font-headline text-base">Información del Dispositivo</CardTitle></CardHeader>
@@ -398,7 +398,7 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                                     </CardContent>
                                 </Card>
                             </div>
-                        </CardContent>
+                        </div>
                     </CollapsibleContent>
                 </Card>
                 </Collapsible>
