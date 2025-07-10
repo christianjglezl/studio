@@ -76,13 +76,12 @@ export function RepairList({ requests, setRequests, brands, models, colors }: Re
                     onValueChange={(newStatus: RepairStatus) => handleStatusChange(request.id, newStatus)}
                   >
                     <SelectTrigger className="w-[180px]">
-                      <Badge className={cn('mr-2', statusColors[request.status])}>•</Badge>
+                      <Badge className={cn('mr-2 h-2 w-2 p-0', statusColors[request.status])} />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {repairStatuses.map(status => (
                         <SelectItem key={status} value={status}>
-                           <Badge className={cn('mr-2', statusColors[status])}>•</Badge>
                           {status}
                         </SelectItem>
                       ))}
