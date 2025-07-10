@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { RepairRequest, RepairStatus, Brand, Model, Color, Accessory, Condition } from '@/lib/types';
+import type { RepairRequest, RepairStatus, Brand, Model, Color, Accessory, Condition, Service } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -30,6 +30,7 @@ interface RepairListProps {
   colors: Color[];
   accessories: Accessory[];
   conditions: Condition[];
+  services: Service[];
 }
 
 const statusColors: { [key in RepairStatus]: string } = {
@@ -53,7 +54,7 @@ const getEntityNames = <T extends { id: string; name: string }>(ids: string[] = 
 
 const RepairRow = ({ 
   request, 
-  brands, models, colors, accessories, conditions, 
+  brands, models, colors, accessories, conditions, services,
   onStatusChange, onEdit
 }: {
   request: RepairRequest;
@@ -62,6 +63,7 @@ const RepairRow = ({
   colors: Color[];
   accessories: Accessory[];
   conditions: Condition[];
+  services: Service[];
   onStatusChange: (requestId: string, newStatus: RepairStatus) => void;
   onEdit: (request: RepairRequest) => void;
 }) => {
@@ -70,7 +72,6 @@ const RepairRow = ({
 
   return (
     <Collapsible asChild key={request.id} open={isOpen} onOpenChange={setIsOpen}>
-      <>
         <TableRow className="align-middle">
           <TableCell>
             <CollapsibleTrigger asChild>
@@ -111,48 +112,55 @@ const RepairRow = ({
                 <span className="sr-only">Editar</span>
              </Button>
           </TableCell>
+          <CollapsibleContent asChild>
+            <tr className="bg-muted/50">
+                <td colSpan={8} className="p-0">
+                  <div className="p-4">
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <Card>
+                        <CardHeader><CardTitle className="text-base font-headline">Falla y Servicios</CardTitle></CardHeader>
+                        <CardContent className="text-sm space-y-2">
+                          <p><strong>Problema:</strong> {request.problem || 'No especificado'}</p>
+                          <p><strong>Descripción:</strong> {request.problemDescription || 'Ninguna'}</p>
+                          <p><strong>Servicios:</strong> {getEntityNames(request.serviceIds, services)}</p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader><CardTitle className="text-base font-headline">Condición y Accesorios</CardTitle></CardHeader>
+                        <CardContent className="text-sm space-y-2">
+                          <p><strong>Condiciones:</strong> {getEntityNames(request.conditions, conditions)}</p>
+                          <p><strong>Accesorios:</strong> {getEntityNames(request.accessories, accessories)}</p>
+                          <p><strong>Notas:</strong> {request.notes || 'Ninguna'}</p>
+                        </CardContent>
+                      </Card>
+                       <Card>
+                        <CardHeader><CardTitle className="text-base font-headline">Seguridad</CardTitle></CardHeader>
+                        <CardContent className="text-sm space-y-2">
+                          <p><strong>IMEI:</strong> {request.imei || 'No provisto'}</p>
+                          <p><strong>Contraseña/PIN:</strong> {request.password || 'No provisto'}</p>
+                          <p><strong>Patrón:</strong> {request.pattern && request.pattern.length > 0 ? request.pattern.join(' - ') : 'No provisto'}</p>
+                        </CardContent>
+                      </Card>
+                       <Card>
+                        <CardHeader><CardTitle className="text-base font-headline">Cotización</CardTitle></CardHeader>
+                        <CardContent className="text-sm space-y-2">
+                          <p><strong>Cotización:</strong> ${request.quote?.toFixed(2) || '0.00'}</p>
+                          <p><strong>Anticipo:</strong> ${request.downPayment?.toFixed(2) || '0.00'}</p>
+                          <p><strong>Restante:</strong> <span className="font-bold">${remaining.toFixed(2)}</span></p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                </td>
+            </tr>
+          </CollapsibleContent>
         </TableRow>
-        <CollapsibleContent asChild>
-          <TableRow>
-            <TableCell colSpan={8} className="p-0">
-              <div className="p-4 bg-muted/50">
-                <div className="grid md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardHeader><CardTitle className="text-base font-headline">Condición y Accesorios</CardTitle></CardHeader>
-                    <CardContent className="text-sm space-y-2">
-                      <p><strong>Condiciones:</strong> {getEntityNames(request.conditions, conditions)}</p>
-                      <p><strong>Accesorios:</strong> {getEntityNames(request.accessories, accessories)}</p>
-                      <p><strong>Notas:</strong> {request.notes || 'Ninguna'}</p>
-                    </CardContent>
-                  </Card>
-                   <Card>
-                    <CardHeader><CardTitle className="text-base font-headline">Seguridad</CardTitle></CardHeader>
-                    <CardContent className="text-sm space-y-2">
-                      <p><strong>IMEI:</strong> {request.imei || 'No provisto'}</p>
-                      <p><strong>Contraseña/PIN:</strong> {request.password || 'No provisto'}</p>
-                      <p><strong>Patrón:</strong> {request.pattern && request.pattern.length > 0 ? request.pattern.join(' - ') : 'No provisto'}</p>
-                    </CardContent>
-                  </Card>
-                   <Card>
-                    <CardHeader><CardTitle className="text-base font-headline">Cotización</CardTitle></CardHeader>
-                    <CardContent className="text-sm space-y-2">
-                      <p><strong>Cotización:</strong> ${request.quote?.toFixed(2) || '0.00'}</p>
-                      <p><strong>Anticipo:</strong> ${request.downPayment?.toFixed(2) || '0.00'}</p>
-                      <p><strong>Restante:</strong> <span className="font-bold">${remaining.toFixed(2)}</span></p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TableCell>
-          </TableRow>
-        </CollapsibleContent>
-      </>
     </Collapsible>
   );
 };
 
 
-export function RepairList({ requests, setRequests, brands, models, setModels, colors, accessories, conditions }: RepairListProps) {
+export function RepairList({ requests, setRequests, brands, models, setModels, colors, accessories, conditions, services }: RepairListProps) {
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
 
   const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
@@ -185,6 +193,7 @@ export function RepairList({ requests, setRequests, brands, models, setModels, c
               colors={colors}
               accessories={accessories}
               conditions={conditions}
+              services={services}
               onAddRequest={() => {}} // Not used in edit mode
               onUpdateRequest={handleUpdate}
               initialData={editingRequest}
@@ -217,6 +226,7 @@ export function RepairList({ requests, setRequests, brands, models, setModels, c
                   colors={colors}
                   accessories={accessories}
                   conditions={conditions}
+                  services={services}
                   onStatusChange={handleStatusChange}
                   onEdit={handleEdit}
                 />

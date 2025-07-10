@@ -31,7 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { PatternLock } from '@/components/pattern-lock';
-import type { Brand, Model, Color, Accessory, Condition, RepairRequest } from '@/lib/types';
+import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -44,6 +44,9 @@ const deviceSchema = z.object({
   modelId: z.string().min(1, { message: 'Por favor, selecciona un modelo.' }),
   colorId: z.string().min(1, { message: 'Por favor, selecciona un color.' }),
   imei: z.string().optional(),
+  problem: z.string().optional(),
+  problemDescription: z.string().optional(),
+  serviceIds: z.array(z.string()).min(1, { message: 'Debes seleccionar al menos un servicio.' }),
   accessories: z.array(z.string()).optional(),
   conditions: z.array(z.string()).min(1, { message: 'Debes seleccionar al menos una condición.' }),
   password: z.string().optional(),
@@ -83,6 +86,7 @@ interface RepairRequestFormProps {
   colors: Color[];
   accessories: Accessory[];
   conditions: Condition[];
+  services: Service[];
   onAddRequest: (data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => void;
   onUpdateRequest?: (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => void;
   initialData?: RepairRequest | null;
@@ -133,12 +137,13 @@ let nextFolio = 1;
 
 const newDeviceDefault = {
     brandId: '', modelId: '', colorId: '', imei: '',
+    problem: '', problemDescription: '', serviceIds: [],
     accessories: [], conditions: [], password: '', pattern: [], notes: '',
     quote: 0, downPayment: 0,
 };
 
 export function RepairRequestForm({ 
-  brands, models, setModels, colors, accessories, conditions, 
+  brands, models, setModels, colors, accessories, conditions, services,
   onAddRequest, onUpdateRequest, initialData = null, onFormClose
 }: RepairRequestFormProps) {
   const { toast } = useToast();
@@ -177,6 +182,9 @@ export function RepairRequestForm({
             modelId: initialData.modelId,
             colorId: initialData.colorId,
             imei: initialData.imei,
+            problem: initialData.problem,
+            problemDescription: initialData.problemDescription,
+            serviceIds: initialData.serviceIds,
             accessories: initialData.accessories,
             conditions: initialData.conditions,
             password: initialData.password,
@@ -272,7 +280,8 @@ export function RepairRequestForm({
         `devices.${lastDeviceIndex}.brandId`,
         `devices.${lastDeviceIndex}.modelId`,
         `devices.${lastDeviceIndex}.colorId`,
-        `devices.${lastDeviceIndex}.conditions`
+        `devices.${lastDeviceIndex}.conditions`,
+        `devices.${lastDeviceIndex}.serviceIds`
     ]);
 
     if (!result) {
@@ -387,7 +396,38 @@ export function RepairRequestForm({
                                         )} />
                                     </CardContent>
                                 </Card>
-                                 <Card>
+
+                                <Card>
+                                    <CardHeader><CardTitle className="font-headline text-base">Falla y Servicio</CardTitle></CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <FormField control={form.control} name={`devices.${index}.problem`} render={({ field }) => (
+                                            <FormItem><FormLabel>Problema (Título)</FormLabel><FormControl><Input placeholder="Ej: Pantalla no responde" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name={`devices.${index}.problemDescription`} render={({ field }) => (
+                                            <FormItem><FormLabel>Descripción del Problema</FormLabel><FormControl><Textarea placeholder="Describe el problema con más detalle..." {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name={`devices.${index}.serviceIds`} render={() => (
+                                            <FormItem>
+                                                <div className="mb-4">
+                                                <FormLabel>Servicio(s) Requerido(s)</FormLabel>
+                                                <FormDescription>Selecciona al menos un servicio.</FormDescription>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-2">
+                                                    {services.map((item) => (
+                                                        <FormField key={item.id} control={form.control} name={`devices.${index}.serviceIds`} render={({ field }) => (
+                                                            <FormItem className="flex flex-row items-start space-x-3 space-y-0"><FormControl><Checkbox checked={field.value?.includes(item.id)} onCheckedChange={(checked) => {
+                                                                return checked ? field.onChange([...(field.value || []), item.id]) : field.onChange(field.value?.filter((value) => value !== item.id))
+                                                            }} /></FormControl><FormLabel className="font-normal">{item.name}</FormLabel></FormItem>
+                                                        )} />
+                                                    ))}
+                                                </div>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    </CardContent>
+                                </Card>
+                                
+                                <Card>
                                     <CardHeader><CardTitle className="font-headline text-base">Costos de Reparación</CardTitle></CardHeader>
                                     <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                         <FormField control={form.control} name={`devices.${index}.quote`} render={({ field }) => (

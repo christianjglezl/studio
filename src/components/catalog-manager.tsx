@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Brand, Model, Color, Accessory, Condition } from '@/lib/types';
+import type { Brand, Model, Color, Accessory, Condition, Service } from '@/lib/types';
 
 interface CatalogManagerProps {
   brands: Brand[];
@@ -22,6 +22,8 @@ interface CatalogManagerProps {
   setAccessories: React.Dispatch<React.SetStateAction<Accessory[]>>;
   conditions: Condition[];
   setConditions: React.Dispatch<React.SetStateAction<Condition[]>>;
+  services: Service[];
+  setServices: React.Dispatch<React.SetStateAction<Service[]>>;
 }
 
 const AddItemDialog: React.FC<{ onAddItem: (name: string, brandId?: string) => void; itemName: string; brands?: Brand[]; hasBrandSelection?: boolean }> = ({ onAddItem, itemName, brands, hasBrandSelection = false }) => {
@@ -135,7 +137,8 @@ export function CatalogManager({
   models, setModels,
   colors, setColors,
   accessories, setAccessories,
-  conditions, setConditions
+  conditions, setConditions,
+  services, setServices,
 }: CatalogManagerProps) {
   
   const addItem = <T extends { id: string; name: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>) => (name: string, brandId?: string) => {
@@ -152,12 +155,13 @@ export function CatalogManager({
 
   return (
     <Tabs defaultValue="brands" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+      <TabsList className="grid w-full grid-cols-3 md:grid-cols-6">
         <TabsTrigger value="brands">Marcas</TabsTrigger>
         <TabsTrigger value="models">Modelos</TabsTrigger>
         <TabsTrigger value="colors">Colores</TabsTrigger>
         <TabsTrigger value="accessories">Accesorios</TabsTrigger>
         <TabsTrigger value="conditions">Condiciones</TabsTrigger>
+        <TabsTrigger value="services">Servicios</TabsTrigger>
       </TabsList>
       <TabsContent value="brands" className="mt-4">
         <CatalogTable title="Marcas" items={brands} onAddItem={addItem(setBrands)} onDeleteItem={deleteItem(setBrands)} />
@@ -173,6 +177,9 @@ export function CatalogManager({
       </TabsContent>
       <TabsContent value="conditions" className="mt-4">
         <CatalogTable title="Condiciones" items={conditions} onAddItem={addItem(setConditions)} onDeleteItem={deleteItem(setConditions)} />
+      </TabsContent>
+      <TabsContent value="services" className="mt-4">
+        <CatalogTable title="Servicios" items={services} onAddItem={addItem(setServices)} onDeleteItem={deleteItem(setServices)} />
       </TabsContent>
     </Tabs>
   );

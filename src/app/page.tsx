@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { RepairRequestForm } from '@/components/repair-request-form';
 import { CatalogManager } from '@/components/catalog-manager';
 import { RepairList } from '@/components/repair-list';
-import type { Brand, Model, Color, Accessory, Condition, RepairRequest } from '@/lib/types';
-import { initialBrands, initialModels, initialColors, initialAccessories, initialConditions } from '@/lib/data';
+import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service } from '@/lib/types';
+import { initialBrands, initialModels, initialColors, initialAccessories, initialConditions, initialServices } from '@/lib/data';
 
 export default function Home() {
   const [isClient, setIsClient] = useState(false);
@@ -19,6 +19,7 @@ export default function Home() {
   const [colors, setColors] = useState<Color[]>(initialColors);
   const [accessories, setAccessories] = useState<Accessory[]>(initialAccessories);
   const [conditions, setConditions] = useState<Condition[]>(initialConditions);
+  const [services, setServices] = useState<Service[]>(initialServices);
   
   // State for repair requests
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
@@ -82,6 +83,7 @@ export default function Home() {
                   colors={colors}
                   accessories={accessories}
                   conditions={conditions}
+                  services={services}
                   onAddRequest={addRepairRequest}
                 />
               </CardContent>
@@ -103,6 +105,7 @@ export default function Home() {
                   colors={colors}
                   accessories={accessories}
                   conditions={conditions}
+                  services={services}
                 />
               </CardContent>
             </Card>
@@ -120,6 +123,7 @@ export default function Home() {
                   colors={colors} setColors={setColors}
                   accessories={accessories} setAccessories={setAccessories}
                   conditions={conditions} setConditions={setConditions}
+                  services={services} setServices={setServices}
                 />
               </CardContent>
             </Card>

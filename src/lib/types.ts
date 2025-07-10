@@ -24,6 +24,11 @@ export interface Condition {
   name: string;
 }
 
+export interface Service {
+  id: string;
+  name: string;
+}
+
 export type RepairStatus = 'Ingresado' | 'En Revisión' | 'En Reparación' | 'Reparado' | 'Listo para Entrega' | 'Entregado' | 'Cancelado';
 
 export const repairStatuses: RepairStatus[] = ['Ingresado', 'En Revisión', 'En Reparación', 'Reparado', 'Listo para Entrega', 'Entregado', 'Cancelado'];
@@ -37,6 +42,9 @@ export interface RepairRequest {
   modelId: string;
   colorId: string;
   imei?: string;
+  problem?: string;
+  problemDescription?: string;
+  serviceIds: string[];
   accessories: string[];
   conditions: string[];
   password?: string;

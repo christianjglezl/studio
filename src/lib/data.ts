@@ -1,4 +1,4 @@
-import type { Brand, Model, Color, Accessory, Condition } from './types';
+import type { Brand, Model, Color, Accessory, Condition, Service } from './types';
 
 export const initialBrands: Brand[] = [
   { id: '1', name: 'Apple' },
@@ -131,4 +131,20 @@ export const initialConditions: Condition[] = [
   { id: 'co4', name: 'Problema de Batería' },
   { id: 'co5', name: 'Marco Doblado' },
   { id: 'co6', name: 'Problema de Altavoz' },
+];
+
+export const initialServices: Service[] = [
+    { id: 'sv1', name: 'Cambio de pantalla' },
+    { id: 'sv2', name: 'Cuenta Google (FRP)' },
+    { id: 'sv3', name: 'Liberación de Red' },
+    { id: 'sv4', name: 'Reparación de Bocina/Altavoz' },
+    { id: 'sv5', name: 'Diagnóstico/Revisión' },
+    { id: 'sv6', name: 'Reparación de Centro de Carga' },
+    { id: 'sv7', name: 'Cambio de Batería' },
+    { id: 'sv8', name: 'Reparación de Placa Base' },
+    { id: 'sv9', name: 'Problemas de Software/Flasheo' },
+    { id: 'sv10', name: 'Reparación de Daño por Líquido' },
+    { id: 'sv11', name: 'Cambio de Cámara (Trasera/Frontal)' },
+    { id: 'sv12', name: 'Reparación de Micrófono' },
+    { id: 'sv13', name: 'Cambio de Tapa Trasera' },
 ];
