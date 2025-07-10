@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { HardDrive, Wrench, Smartphone } from 'lucide-react';
+import { HardDrive, Wrench, Smartphone, List } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RepairRequestForm } from '@/components/repair-request-form';
 import { CatalogManager } from '@/components/catalog-manager';
-import type { Brand, Model, Color, Accessory, Condition } from '@/lib/types';
+import { RepairList } from '@/components/repair-list';
+import type { Brand, Model, Color, Accessory, Condition, RepairRequest } from '@/lib/types';
 import { initialBrands, initialModels, initialColors, initialAccessories, initialConditions } from '@/lib/data';
 
 export default function Home() {
@@ -19,9 +20,23 @@ export default function Home() {
   const [accessories, setAccessories] = useState<Accessory[]>(initialAccessories);
   const [conditions, setConditions] = useState<Condition[]>(initialConditions);
   
+  // State for repair requests
+  const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
+  
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  const addRepairRequest = (newRequest: Omit<RepairRequest, 'id' | 'status'>) => {
+    setRepairRequests(prev => [
+        { 
+            ...newRequest, 
+            id: crypto.randomUUID(),
+            status: 'Ingresado'
+        }, 
+        ...prev
+    ]);
+  }
 
   if (!isClient) {
     return null; // or a loading spinner
@@ -39,10 +54,14 @@ export default function Home() {
         </header>
         
         <Tabs defaultValue="repair" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="repair">
               <Wrench className="mr-2 h-4 w-4" />
               Nueva Solicitud de Reparación
+            </TabsTrigger>
+             <TabsTrigger value="list">
+              <List className="mr-2 h-4 w-4" />
+              Lista de Reparaciones
             </TabsTrigger>
             <TabsTrigger value="catalog">
               <HardDrive className="mr-2 h-4 w-4" />
@@ -63,6 +82,24 @@ export default function Home() {
                   colors={colors}
                   accessories={accessories}
                   conditions={conditions}
+                  onAddRequest={addRepairRequest}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="list">
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-headline">Lista de Reparaciones</CardTitle>
+                <CardDescription>Ver y gestionar todas las solicitudes de reparación registradas.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RepairList 
+                  requests={repairRequests} 
+                  setRequests={setRepairRequests}
+                  brands={brands}
+                  models={models}
+                  colors={colors}
                 />
               </CardContent>
             </Card>

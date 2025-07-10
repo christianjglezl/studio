@@ -24,20 +24,26 @@ export interface Condition {
   name: string;
 }
 
+export type RepairStatus = 'Ingresado' | 'En Revisión' | 'En Reparación' | 'Reparado' | 'Listo para Entrega' | 'Entregado' | 'Cancelado';
+
+export const repairStatuses: RepairStatus[] = ['Ingresado', 'En Revisión', 'En Reparación', 'Reparado', 'Listo para Entrega', 'Entregado', 'Cancelado'];
+
 export interface RepairRequest {
   id: string;
+  folio: number;
   clientName: string;
-  phoneNumbers: string[];
-  brand: Brand;
-  model: Model;
-  color: Color;
+  phoneNumbers: { value: string }[];
+  brandId: string;
+  modelId: string;
+  colorId: string;
   imei?: string;
-  accessories: Accessory[];
-  conditions: Condition[];
+  accessories: string[];
+  conditions: string[];
   password?: string;
   pattern?: number[];
   notes?: string;
   createdAt: string;
   quote?: number;
   downPayment?: number;
+  status: RepairStatus;
 }

@@ -31,7 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { PatternLock } from '@/components/pattern-lock';
-import type { Brand, Model, Color, Accessory, Condition } from '@/lib/types';
+import type { Brand, Model, Color, Accessory, Condition, RepairRequest } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -75,6 +75,7 @@ interface RepairRequestFormProps {
   colors: Color[];
   accessories: Accessory[];
   conditions: Condition[];
+  onAddRequest: (data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => void;
 }
 
 const AddNewModelDialog: React.FC<{ onAddModel: (name: string) => void }> = ({ onAddModel }) => {
@@ -117,7 +118,9 @@ const AddNewModelDialog: React.FC<{ onAddModel: (name: string) => void }> = ({ o
   );
 };
 
-export function RepairRequestForm({ brands, models, setModels, colors, accessories, conditions }: RepairRequestFormProps) {
+let nextFolio = 1;
+
+export function RepairRequestForm({ brands, models, setModels, colors, accessories, conditions, onAddRequest }: RepairRequestFormProps) {
   const { toast } = useToast();
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
@@ -163,9 +166,10 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
   function onSubmit(data: RepairRequestFormValues) {
     const submissionData = {
       ...data,
-      timestamp: new Date().toISOString(),
+      folio: nextFolio++,
+      createdAt: new Date().toISOString(),
     };
-    console.log(submissionData);
+    onAddRequest(submissionData);
     toast({
       title: "¡Solicitud de Reparación Enviada!",
       description: `El dispositivo para ${data.clientName} ha sido registrado.`,
