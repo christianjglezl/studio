@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { HardDrive, Wrench } from 'lucide-react';
+import { HardDrive, Wrench, Smartphone } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RepairRequestForm } from '@/components/repair-request-form';
@@ -32,8 +32,8 @@ export default function Home() {
       <div className="w-full max-w-6xl">
         <header className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <Wrench className="w-8 h-8 text-primary" />
-            <h1 className="text-4xl font-bold font-headline text-primary">TechCheck</h1>
+            <Smartphone className="w-8 h-8 text-primary" />
+            <h1 className="text-4xl font-bold font-headline text-primary">EasyTech</h1>
           </div>
           <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
         </header>
