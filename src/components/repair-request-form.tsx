@@ -51,11 +51,11 @@ const deviceSchema = z.object({
   notes: z.string().optional(),
   quote: z.preprocess(
     (val) => (val === "" || val === undefined ? 0 : parseFloat(String(val))),
-    z.number({invalid_type_error: "La cotización debe ser un número."}).nonnegative({ message: 'La cotización no puede ser negativa.' }).optional()
+    z.number({invalid_type_error: "La cotización debe ser un número."}).nonnegative({ message: 'La cotización no puede ser negativa.' }).optional().default(0)
   ),
   downPayment: z.preprocess(
     (val) => (val === "" || val === undefined ? 0 : parseFloat(String(val))),
-    z.number({invalid_type_error: "El anticipo debe ser un número."}).nonnegative({ message: 'El anticipo no puede ser negativo.' }).optional()
+    z.number({invalid_type_error: "El anticipo debe ser un número."}).nonnegative({ message: 'El anticipo no puede ser negativo.' }).optional().default(0)
   ),
 }).refine(data => {
     if (data.quote !== undefined && data.downPayment !== undefined) {
@@ -157,38 +157,45 @@ export function RepairRequestForm({
     },
   });
 
-  useEffect(() => {
-    if (isEditing && initialData) {
-      form.reset({
-        clientName: initialData.clientName,
-        phoneNumbers: initialData.phoneNumbers,
-        devices: [{
-          brandId: initialData.brandId,
-          modelId: initialData.modelId,
-          colorId: initialData.colorId,
-          imei: initialData.imei,
-          accessories: initialData.accessories,
-          conditions: initialData.conditions,
-          password: initialData.password,
-          pattern: initialData.pattern,
-          notes: initialData.notes,
-          quote: initialData.quote,
-          downPayment: initialData.downPayment,
-        }]
-      });
-      setOpenDevices({0: true});
-    }
-  }, [initialData, isEditing, form]);
-
   const { fields: phoneFields, append: appendPhone, remove: removePhone } = useFieldArray({
     control: form.control,
     name: "phoneNumbers",
   });
-
+  
   const { fields: deviceFields, append: appendDevice, remove: removeDevice } = useFieldArray({
     control: form.control,
     name: "devices",
   });
+
+  useEffect(() => {
+    if (isEditing && initialData) {
+      removeDevice(); // Clear default device field
+      appendDevice({
+        brandId: initialData.brandId,
+        modelId: initialData.modelId,
+        colorId: initialData.colorId,
+        imei: initialData.imei,
+        accessories: initialData.accessories,
+        conditions: initialData.conditions,
+        password: initialData.password,
+        pattern: initialData.pattern,
+        notes: initialData.notes,
+        quote: initialData.quote,
+        downPayment: initialData.downPayment,
+      });
+
+      // Reset client info and phones
+      form.reset({
+        clientName: initialData.clientName,
+        phoneNumbers: initialData.phoneNumbers,
+        devices: form.getValues('devices') // Keep the devices we just set
+      });
+
+      setOpenDevices({0: true});
+    }
+  }, [initialData, isEditing, form, appendDevice, removeDevice]);
+
+
   
   const watchedDevices = form.watch('devices');
 
@@ -365,7 +372,7 @@ export function RepairRequestForm({
                          </Button>
                        )}
                     </div>
-                    <CollapsibleContent forceMount className={cn("overflow-hidden", !isOpen && "hidden")}>
+                    <CollapsibleContent forceMount={isEditing} className={cn("overflow-hidden", !isOpen && "hidden")}>
                         <div className="grid md:grid-cols-2 gap-8 p-6 pt-0">
                             <div className="space-y-6">
                                 <Card>
@@ -393,7 +400,7 @@ export function RepairRequestForm({
                                             <FormItem><FormLabel>Cotización</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
                                         )} />
                                         <FormField control={form.control} name={`devices.${index}.downPayment`} render={({ field }) => (
-                                            <FormItem><FormLabel>Anticipo (Opcional)</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormLabel>Anticipo</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
                                         )} />
                                         <FormItem>
                                             <FormLabel>Restante</FormLabel>

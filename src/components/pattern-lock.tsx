@@ -68,10 +68,10 @@ export function PatternLock({ name, className }: PatternLockProps) {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Use HSL values from theme
     const primaryColor = 'hsl(228 44% 27%)'; // --primary
     const accentColor = 'hsl(268 31% 44%)'; // --accent
     const mutedColor = 'hsl(240 5% 82%)'; // --border
+    const startColor = 'hsl(var(--accent))'; // accent color for start point
 
     // Draw lines
     if (pattern.length > 1) {
@@ -89,8 +89,16 @@ export function PatternLock({ name, className }: PatternLockProps) {
     dots.forEach(dot => {
       ctx.beginPath();
       const isSelected = pattern.includes(dot.index);
+      const isStart = pattern[0] === dot.index;
       ctx.arc(dot.x, dot.y, isSelected ? ACTIVE_DOT_RADIUS : DOT_RADIUS, 0, 2 * Math.PI);
-      ctx.fillStyle = isSelected ? primaryColor : mutedColor;
+      
+      if (isStart) {
+        ctx.fillStyle = startColor;
+      } else if (isSelected) {
+        ctx.fillStyle = primaryColor;
+      } else {
+        ctx.fillStyle = mutedColor;
+      }
       ctx.fill();
     });
   };
