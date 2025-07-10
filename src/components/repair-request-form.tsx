@@ -37,6 +37,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu';
 
 
 const deviceSchema = z.object({
@@ -359,23 +360,27 @@ export function RepairRequestForm({
              const downPaymentValue = watchedDevices[index]?.downPayment || 0;
              const remainingValue = quoteValue - downPaymentValue;
              const isOpen = openDevices[index] ?? false;
+             const selectedServiceIds = watchedDevices[index]?.serviceIds || [];
+             const selectedServicesText = selectedServiceIds.length > 0
+                ? `${selectedServiceIds.length} servicio(s) seleccionado(s)`
+                : 'Seleccionar servicios';
 
              return (
                 <Collapsible key={field.id} open={isOpen} onOpenChange={() => handleToggleDevice(index)} className="group">
                 <Card className="border-primary border-2 p-0 overflow-hidden">
-                     <div className="flex justify-between items-start mt-6 mb-4 px-6">
-                       <CollapsibleTrigger asChild>
-                       <button type="button" className="flex items-center gap-2 text-lg font-headline text-primary pt-1 w-full">
-                          {isOpen ? <ChevronUp /> : <ChevronDown />}
-                          <Smartphone /> Dispositivo #{index + 1}
+                     <CollapsibleTrigger asChild>
+                       <button type="button" className="flex justify-between items-center w-full mt-6 mb-4 px-6">
+                         <div className="flex items-center gap-2 text-lg font-headline text-primary pt-1">
+                            {isOpen ? <ChevronUp /> : <ChevronDown />}
+                            <Smartphone /> Dispositivo #{index + 1}
+                         </div>
+                         {deviceFields.length > 1 && !isEditing && (
+                           <Button type="button" variant="destructive" size="icon" className="h-7 w-7 mt-1 flex-shrink-0" onClick={(e) => { e.stopPropagation(); removeDevice(index); }}>
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
+                         )}
                        </button>
-                       </CollapsibleTrigger>
-                       {deviceFields.length > 1 && !isEditing && (
-                         <Button type="button" variant="destructive" size="icon" className="h-7 w-7 mt-1 flex-shrink-0" onClick={() => removeDevice(index)}>
-                           <Trash2 className="h-4 w-4" />
-                         </Button>
-                       )}
-                    </div>
+                     </CollapsibleTrigger>
                     <CollapsibleContent forceMount={isEditing}>
                         <div className="grid md:grid-cols-2 gap-8 p-6 pt-0">
                             <div className="space-y-6">
@@ -406,21 +411,34 @@ export function RepairRequestForm({
                                         <FormField control={form.control} name={`devices.${index}.problemDescription`} render={({ field }) => (
                                             <FormItem><FormLabel>Descripción del Problema</FormLabel><FormControl><Textarea placeholder="Describe el problema con más detalle..." {...field} /></FormControl><FormMessage /></FormItem>
                                         )} />
-                                        <FormField control={form.control} name={`devices.${index}.serviceIds`} render={() => (
+                                        <FormField control={form.control} name={`devices.${index}.serviceIds`} render={({ field }) => (
                                             <FormItem>
-                                                <div className="mb-4">
                                                 <FormLabel>Servicio(s) Requerido(s)</FormLabel>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="outline" className="w-full justify-start font-normal">
+                                                           {selectedServicesText}
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent className="w-full max-h-60 overflow-y-auto">
+                                                        {services.map((item) => (
+                                                            <DropdownMenuCheckboxItem
+                                                                key={item.id}
+                                                                checked={field.value?.includes(item.id)}
+                                                                onCheckedChange={(checked) => {
+                                                                    const newValue = checked
+                                                                        ? [...(field.value || []), item.id]
+                                                                        : (field.value || []).filter((value) => value !== item.id);
+                                                                    field.onChange(newValue);
+                                                                }}
+                                                                onSelect={(e) => e.preventDefault()} // Evita que el menú se cierre al seleccionar
+                                                            >
+                                                                {item.name}
+                                                            </DropdownMenuCheckboxItem>
+                                                        ))}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                                 <FormDescription>Selecciona al menos un servicio.</FormDescription>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-2">
-                                                    {services.map((item) => (
-                                                        <FormField key={item.id} control={form.control} name={`devices.${index}.serviceIds`} render={({ field }) => (
-                                                            <FormItem className="flex flex-row items-start space-x-3 space-y-0"><FormControl><Checkbox checked={field.value?.includes(item.id)} onCheckedChange={(checked) => {
-                                                                return checked ? field.onChange([...(field.value || []), item.id]) : field.onChange(field.value?.filter((value) => value !== item.id))
-                                                            }} /></FormControl><FormLabel className="font-normal">{item.name}</FormLabel></FormItem>
-                                                        )} />
-                                                    ))}
-                                                </div>
                                                 <FormMessage />
                                             </FormItem>
                                         )} />
