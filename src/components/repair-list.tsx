@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Select,
@@ -10,11 +10,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import type { RepairRequest, RepairStatus, Brand, Model, Color } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import type { RepairRequest, RepairStatus, Brand, Model, Color, Accessory, Condition } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { ChevronDown, Copy } from 'lucide-react';
 
 interface RepairListProps {
   requests: RepairRequest[];
@@ -22,6 +26,9 @@ interface RepairListProps {
   brands: Brand[];
   models: Model[];
   colors: Color[];
+  accessories: Accessory[];
+  conditions: Condition[];
+  onDuplicate: (request: RepairRequest) => void;
 }
 
 const statusColors: { [key in RepairStatus]: string } = {
@@ -34,8 +41,112 @@ const statusColors: { [key in RepairStatus]: string } = {
   Cancelado: 'bg-red-500',
 };
 
-export function RepairList({ requests, setRequests, brands, models, colors }: RepairListProps) {
+const getEntityName = <T extends { id: string; name: string }>(id: string, entities: T[]): string => {
+  return entities.find(e => e.id === id)?.name || 'N/A';
+};
 
+const getEntityNames = <T extends { id: string; name: string }>(ids: string[] = [], entities: T[]): string => {
+    if (!ids || ids.length === 0) return 'Ninguno';
+    return ids.map(id => getEntityName(id, entities)).join(', ');
+};
+
+const RepairRow = ({ request, brands, models, colors, accessories, conditions, onStatusChange, onDuplicate }: {
+  request: RepairRequest;
+  brands: Brand[];
+  models: Model[];
+  colors: Color[];
+  accessories: Accessory[];
+  conditions: Condition[];
+  onStatusChange: (requestId: string, newStatus: RepairStatus) => void;
+  onDuplicate: (request: RepairRequest) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const remaining = (request.quote || 0) - (request.downPayment || 0);
+
+  return (
+    <Collapsible asChild open={isOpen} onOpenChange={setIsOpen}>
+      <>
+        <TableRow className="align-middle">
+          <TableCell>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                <span className="sr-only">{isOpen ? "Cerrar" : "Abrir"} detalles</span>
+              </Button>
+            </CollapsibleTrigger>
+          </TableCell>
+          <TableCell className="font-medium">{String(request.folio).padStart(4, '0')}</TableCell>
+          <TableCell>{request.clientName}</TableCell>
+          <TableCell>{request.phoneNumbers[0]?.value || 'N/A'}</TableCell>
+          <TableCell>{getEntityName(request.brandId, brands)} {getEntityName(request.modelId, models)} ({getEntityName(request.colorId, colors)})</TableCell>
+          <TableCell>{format(new Date(request.createdAt), 'PPp', { locale: es })}</TableCell>
+          <TableCell>
+            <Select
+              value={request.status}
+              onValueChange={(newStatus: RepairStatus) => onStatusChange(request.id, newStatus)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <div className="flex items-center gap-2">
+                  <span className={cn('h-2.5 w-2.5 rounded-full', statusColors[request.status])} />
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {repairStatuses.map(status => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+           <TableCell className="text-right">
+            <Button variant="outline" size="sm" onClick={() => onDuplicate(request)}>
+              <Copy className="mr-2 h-4 w-4" /> Registrar otro
+            </Button>
+          </TableCell>
+        </TableRow>
+        <CollapsibleContent asChild>
+          <TableRow>
+            <TableCell colSpan={8} className="p-0">
+              <div className="p-4 bg-muted/50">
+                <div className="grid md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader><CardTitle className="text-base font-headline">Condición y Accesorios</CardTitle></CardHeader>
+                    <CardContent className="text-sm space-y-2">
+                      <p><strong>Condiciones:</strong> {getEntityNames(request.conditions, conditions)}</p>
+                      <p><strong>Accesorios:</strong> {getEntityNames(request.accessories, accessories)}</p>
+                      <p><strong>Notas:</strong> {request.notes || 'Ninguna'}</p>
+                    </CardContent>
+                  </Card>
+                   <Card>
+                    <CardHeader><CardTitle className="text-base font-headline">Seguridad</CardTitle></CardHeader>
+                    <CardContent className="text-sm space-y-2">
+                      <p><strong>IMEI:</strong> {request.imei || 'No provisto'}</p>
+                      <p><strong>Contraseña/PIN:</strong> {request.password || 'No provisto'}</p>
+                      <p><strong>Patrón:</strong> {request.pattern && request.pattern.length > 0 ? request.pattern.join(' - ') : 'No provisto'}</p>
+                    </CardContent>
+                  </Card>
+                   <Card>
+                    <CardHeader><CardTitle className="text-base font-headline">Cotización</CardTitle></CardHeader>
+                    <CardContent className="text-sm space-y-2">
+                      <p><strong>Cotización:</strong> ${request.quote?.toFixed(2) || '0.00'}</p>
+                      <p><strong>Anticipo:</strong> ${request.downPayment?.toFixed(2) || '0.00'}</p>
+                      <p><strong>Restante:</strong> <span className="font-bold">${remaining.toFixed(2)}</span></p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </TableCell>
+          </TableRow>
+        </CollapsibleContent>
+      </>
+    </Collapsible>
+  );
+};
+
+
+export function RepairList({ requests, setRequests, brands, models, colors, accessories, conditions, onDuplicate }: RepairListProps) {
   const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
     setRequests(prevRequests =>
       prevRequests.map(req =>
@@ -43,56 +154,40 @@ export function RepairList({ requests, setRequests, brands, models, colors }: Re
       )
     );
   };
-  
-  const getEntityName = <T extends { id: string; name: string }>(id: string, entities: T[]): string => {
-    return entities.find(e => e.id === id)?.name || 'N/A';
-  }
 
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-12"></TableHead>
             <TableHead>Folio</TableHead>
             <TableHead>Cliente</TableHead>
+            <TableHead>Teléfono</TableHead>
             <TableHead>Dispositivo</TableHead>
             <TableHead>Fecha de Ingreso</TableHead>
-            <TableHead>Cotización</TableHead>
             <TableHead>Estatus</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {requests.length > 0 ? (
             requests.map(request => (
-              <TableRow key={request.id}>
-                <TableCell className="font-medium">{String(request.folio).padStart(4, '0')}</TableCell>
-                <TableCell>{request.clientName}</TableCell>
-                <TableCell>{getEntityName(request.brandId, brands)} {getEntityName(request.modelId, models)} ({getEntityName(request.colorId, colors)})</TableCell>
-                <TableCell>{format(new Date(request.createdAt), 'PPpp', { locale: es })}</TableCell>
-                <TableCell>${(request.quote || 0).toFixed(2)}</TableCell>
-                <TableCell>
-                  <Select
-                    value={request.status}
-                    onValueChange={(newStatus: RepairStatus) => handleStatusChange(request.id, newStatus)}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <Badge className={cn('mr-2 h-2 w-2 p-0', statusColors[request.status])} />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {repairStatuses.map(status => (
-                        <SelectItem key={status} value={status}>
-                          {status}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-              </TableRow>
+              <RepairRow 
+                key={request.id}
+                request={request}
+                brands={brands}
+                models={models}
+                colors={colors}
+                accessories={accessories}
+                conditions={conditions}
+                onStatusChange={handleStatusChange}
+                onDuplicate={onDuplicate}
+              />
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
+              <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
                 No hay solicitudes de reparación registradas.
               </TableCell>
             </TableRow>

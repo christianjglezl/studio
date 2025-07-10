@@ -66,7 +66,7 @@ const formSchema = z.object({
     path: ["downPayment"],
 });
 
-type RepairRequestFormValues = z.infer<typeof formSchema>;
+export type RepairRequestFormValues = z.infer<typeof formSchema>;
 
 interface RepairRequestFormProps {
   brands: Brand[];
@@ -76,6 +76,8 @@ interface RepairRequestFormProps {
   accessories: Accessory[];
   conditions: Condition[];
   onAddRequest: (data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => void;
+  initialData?: Partial<RepairRequestFormValues>;
+  onFormSubmit?: () => void;
 }
 
 const AddNewModelDialog: React.FC<{ onAddModel: (name: string) => void }> = ({ onAddModel }) => {
@@ -120,7 +122,7 @@ const AddNewModelDialog: React.FC<{ onAddModel: (name: string) => void }> = ({ o
 
 let nextFolio = 1;
 
-export function RepairRequestForm({ brands, models, setModels, colors, accessories, conditions, onAddRequest }: RepairRequestFormProps) {
+export function RepairRequestForm({ brands, models, setModels, colors, accessories, conditions, onAddRequest, initialData, onFormSubmit }: RepairRequestFormProps) {
   const { toast } = useToast();
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
@@ -138,6 +140,16 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
       downPayment: 0,
     },
   });
+
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        ...form.getValues(),
+        clientName: initialData.clientName || '',
+        phoneNumbers: initialData.phoneNumbers?.length ? initialData.phoneNumbers : [{ value: '' }],
+      });
+    }
+  }, [initialData, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -176,6 +188,7 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
       className: 'bg-primary text-primary-foreground',
     });
     form.reset();
+    onFormSubmit?.();
   }
 
   const handleModelChange = (value: string) => {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { HardDrive, Wrench, Smartphone, List } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { RepairRequestForm } from '@/components/repair-request-form';
+import { RepairRequestForm, type RepairRequestFormValues } from '@/components/repair-request-form';
 import { CatalogManager } from '@/components/catalog-manager';
 import { RepairList } from '@/components/repair-list';
 import type { Brand, Model, Color, Accessory, Condition, RepairRequest } from '@/lib/types';
@@ -12,6 +12,8 @@ import { initialBrands, initialModels, initialColors, initialAccessories, initia
 
 export default function Home() {
   const [isClient, setIsClient] = useState(false);
+  const [activeTab, setActiveTab] = useState('repair');
+  const [prefillData, setPrefillData] = useState<Partial<RepairRequestFormValues> | undefined>(undefined);
 
   // State for catalog data
   const [brands, setBrands] = useState<Brand[]>(initialBrands);
@@ -37,6 +39,14 @@ export default function Home() {
         ...prev
     ]);
   }
+  
+  const handleDuplicateRequest = (request: RepairRequest) => {
+    setPrefillData({
+      clientName: request.clientName,
+      phoneNumbers: request.phoneNumbers,
+    });
+    setActiveTab('repair');
+  };
 
   if (!isClient) {
     return null; // or a loading spinner
@@ -53,7 +63,7 @@ export default function Home() {
           <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
         </header>
         
-        <Tabs defaultValue="repair" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="repair">
               <Wrench className="mr-2 h-4 w-4" />
@@ -83,6 +93,8 @@ export default function Home() {
                   accessories={accessories}
                   conditions={conditions}
                   onAddRequest={addRepairRequest}
+                  initialData={prefillData}
+                  onFormSubmit={() => setPrefillData(undefined)}
                 />
               </CardContent>
             </Card>
@@ -100,6 +112,9 @@ export default function Home() {
                   brands={brands}
                   models={models}
                   colors={colors}
+                  accessories={accessories}
+                  conditions={conditions}
+                  onDuplicate={handleDuplicateRequest}
                 />
               </CardContent>
             </Card>
