@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import * as z from 'zod';
-import { PlusCircle, Trash2, Calendar as CalendarIcon, Clock, DollarSign } from 'lucide-react';
+import { PlusCircle, Trash2, Calendar as CalendarIcon, Clock, DollarSign, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -76,8 +76,6 @@ interface RepairRequestFormProps {
   accessories: Accessory[];
   conditions: Condition[];
   onAddRequest: (data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => void;
-  initialData?: Partial<RepairRequestFormValues>;
-  onFormSubmit?: () => void;
 }
 
 const AddNewModelDialog: React.FC<{ onAddModel: (name: string) => void }> = ({ onAddModel }) => {
@@ -122,34 +120,31 @@ const AddNewModelDialog: React.FC<{ onAddModel: (name: string) => void }> = ({ o
 
 let nextFolio = 1;
 
-export function RepairRequestForm({ brands, models, setModels, colors, accessories, conditions, onAddRequest, initialData, onFormSubmit }: RepairRequestFormProps) {
+export function RepairRequestForm({ brands, models, setModels, colors, accessories, conditions, onAddRequest }: RepairRequestFormProps) {
   const { toast } = useToast();
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
   const [isAddingModel, setIsAddingModel] = useState(false);
+  const [isClientLocked, setIsClientLocked] = useState(false);
 
   const form = useForm<RepairRequestFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       clientName: '',
       phoneNumbers: [{ value: '' }],
+      brandId: '',
+      modelId: '',
+      colorId: '',
+      imei: '',
       accessories: [],
       conditions: [],
+      password: '',
       pattern: [],
+      notes: '',
       quote: 0,
       downPayment: 0,
     },
   });
-
-  useEffect(() => {
-    if (initialData) {
-      form.reset({
-        ...form.getValues(),
-        clientName: initialData.clientName || '',
-        phoneNumbers: initialData.phoneNumbers?.length ? initialData.phoneNumbers : [{ value: '' }],
-      });
-    }
-  }, [initialData, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -175,6 +170,23 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
     }
   }, [selectedBrandId, models, form]);
 
+  const resetDeviceFields = () => {
+    form.reset({
+      ...form.getValues(), // keep client info
+      brandId: '',
+      modelId: '',
+      colorId: '',
+      imei: '',
+      accessories: [],
+      conditions: [],
+      password: '',
+      pattern: [],
+      notes: '',
+      quote: 0,
+      downPayment: 0,
+    });
+  }
+
   function onSubmit(data: RepairRequestFormValues) {
     const submissionData = {
       ...data,
@@ -183,12 +195,13 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
     };
     onAddRequest(submissionData);
     toast({
-      title: "¡Solicitud de Reparación Enviada!",
-      description: `El dispositivo para ${data.clientName} ha sido registrado.`,
+      title: "¡Dispositivo Registrado!",
+      description: `El dispositivo para ${data.clientName} se ha añadido. Puede registrar otro.`,
       className: 'bg-primary text-primary-foreground',
     });
-    form.reset();
-    onFormSubmit?.();
+    
+    setIsClientLocked(true);
+    resetDeviceFields();
   }
 
   const handleModelChange = (value: string) => {
@@ -213,6 +226,11 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
     }
   };
 
+  const startNewClient = () => {
+      setIsClientLocked(false);
+      form.reset();
+  }
+
   return (
     <Dialog open={isAddingModel} onOpenChange={setIsAddingModel}>
       <Form {...form}>
@@ -232,10 +250,18 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
           <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-6">
                   <Card>
-                      <CardHeader><CardTitle className="font-headline">Información del Cliente</CardTitle></CardHeader>
+                      <CardHeader className='flex-row items-center justify-between'>
+                        <CardTitle className="font-headline">Información del Cliente</CardTitle>
+                        {isClientLocked && (
+                            <Button variant="outline" size="sm" onClick={startNewClient}>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Nuevo Cliente
+                            </Button>
+                        )}
+                      </CardHeader>
                       <CardContent className="space-y-4">
                           <FormField control={form.control} name="clientName" render={({ field }) => (
-                              <FormItem><FormLabel>Nombre del Cliente</FormLabel><FormControl><Input placeholder="John Doe" {...field} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormLabel>Nombre del Cliente</FormLabel><FormControl><Input placeholder="John Doe" {...field} disabled={isClientLocked} /></FormControl><FormMessage /></FormItem>
                           )} />
                           <div>
                               <FormLabel>Número(s) de Teléfono</FormLabel>
@@ -243,28 +269,67 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                                   <FormField key={field.id} control={form.control} name={`phoneNumbers.${index}.value`} render={({ field }) => (
                                       <FormItem className="mt-2"><FormControl>
                                           <div className="flex items-center gap-2">
-                                              <Input placeholder="Ej: 555-123-4567" {...field} />
-                                              <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}><Trash2 className="h-4 w-4" /></Button>
+                                              <Input placeholder="Ej: 555-123-4567" {...field} disabled={isClientLocked} />
+                                              <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1 || isClientLocked}><Trash2 className="h-4 w-4" /></Button>
                                           </div>
                                       </FormControl><FormMessage /></FormItem>
                                   )} />
                               ))}
-                              <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({ value: "" })}><PlusCircle className="mr-2 h-4 w-4" />Añadir Teléfono</Button>
+                              <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({ value: "" })} disabled={isClientLocked}><PlusCircle className="mr-2 h-4 w-4" />Añadir Teléfono</Button>
                           </div>
                       </CardContent>
                   </Card>
   
                   <Card>
+                      <CardHeader><CardTitle className="font-headline">Costos de Reparación</CardTitle></CardHeader>
+                      <CardContent className="grid md:grid-cols-3 gap-6">
+                          <FormField control={form.control} name="quote" render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Precio de Cotización</FormLabel>
+                                  <FormControl>
+                                      <div className="relative">
+                                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                          <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)} className="pl-8" />
+                                      </div>
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )} />
+                          <FormField control={form.control} name="downPayment" render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Anticipo</FormLabel>
+                                  <FormControl>
+                                       <div className="relative">
+                                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                          <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)} className="pl-8" />
+                                      </div>
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )} />
+                          <FormItem>
+                              <FormLabel>Restante</FormLabel>
+                              <div className="relative">
+                                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input readOnly disabled value={remainingValue.toFixed(2)} className="pl-8 font-bold text-lg" />
+                              </div>
+                          </FormItem>
+                      </CardContent>
+                  </Card>
+
+              </div>
+              <div className="space-y-6">
+                  <Card>
                       <CardHeader><CardTitle className="font-headline">Información del Dispositivo</CardTitle></CardHeader>
                       <CardContent className="space-y-4">
                            <FormField control={form.control} name="brandId" render={({ field }) => (
-                              <FormItem><FormLabel>Marca</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona una marca" /></SelectTrigger></FormControl><SelectContent>{brands.map(brand => (<SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                              <FormItem><FormLabel>Marca</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona una marca" /></SelectTrigger></FormControl><SelectContent>{brands.map(brand => (<SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                           )} />
                            <FormField control={form.control} name="modelId" render={({ field }) => (
                               <FormItem><FormLabel>Modelo</FormLabel><Select onValueChange={handleModelChange} value={field.value} disabled={!selectedBrandId}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona un modelo" /></SelectTrigger></FormControl><SelectContent>{filteredModels.map(model => (<SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>))} <SelectItem value="add-new" className="text-primary font-medium">Añadir nuevo modelo...</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name="colorId" render={({ field }) => (
-                              <FormItem><FormLabel>Color</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona un color" /></SelectTrigger></FormControl><SelectContent>{colors.map(color => (<SelectItem key={color.id} value={color.id}>{color.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                              <FormItem><FormLabel>Color</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona un color" /></SelectTrigger></FormControl><SelectContent>{colors.map(color => (<SelectItem key={color.id} value={color.id}>{color.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name="imei" render={({ field }) => (
                               <FormItem><FormLabel>IMEI (Opcional)</FormLabel><FormControl><Input placeholder="IMEI del dispositivo" {...field} /></FormControl><FormMessage /></FormItem>
@@ -272,44 +337,6 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                       </CardContent>
                   </Card>
                   
-                  <Card>
-                    <CardHeader><CardTitle className="font-headline">Costos de Reparación</CardTitle></CardHeader>
-                    <CardContent className="grid md:grid-cols-3 gap-6">
-                        <FormField control={form.control} name="quote" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Precio de Cotización</FormLabel>
-                                <FormControl>
-                                    <div className="relative">
-                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)} className="pl-8" />
-                                    </div>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormField control={form.control} name="downPayment" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Anticipo</FormLabel>
-                                <FormControl>
-                                     <div className="relative">
-                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)} className="pl-8" />
-                                    </div>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormItem>
-                            <FormLabel>Restante</FormLabel>
-                            <div className="relative">
-                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input readOnly disabled value={remainingValue.toFixed(2)} className="pl-8 font-bold text-lg" />
-                            </div>
-                        </FormItem>
-                    </CardContent>
-                  </Card>
-              </div>
-              <div className="space-y-6">
                   <Card>
                       <CardHeader><CardTitle className="font-headline">Condición y Accesorios</CardTitle></CardHeader>
                       <CardContent className="space-y-4">
@@ -375,7 +402,9 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
           </div>
   
           <div className="flex justify-end">
-              <Button type="submit" size="lg">Crear Solicitud de Reparación</Button>
+              <Button type="submit" size="lg">
+                {isClientLocked ? 'Añadir Otro Dispositivo' : 'Crear Solicitud y Añadir Dispositivo'}
+              </Button>
           </div>
         </form>
       </Form>

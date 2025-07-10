@@ -18,7 +18,7 @@ import { repairStatuses } from '@/lib/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { ChevronDown, Copy } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 interface RepairListProps {
   requests: RepairRequest[];
@@ -28,7 +28,6 @@ interface RepairListProps {
   colors: Color[];
   accessories: Accessory[];
   conditions: Condition[];
-  onDuplicate: (request: RepairRequest) => void;
 }
 
 const statusColors: { [key in RepairStatus]: string } = {
@@ -50,7 +49,7 @@ const getEntityNames = <T extends { id: string; name: string }>(ids: string[] = 
     return ids.map(id => getEntityName(id, entities)).join(', ');
 };
 
-const RepairRow = ({ request, brands, models, colors, accessories, conditions, onStatusChange, onDuplicate }: {
+const RepairRow = ({ request, brands, models, colors, accessories, conditions, onStatusChange }: {
   request: RepairRequest;
   brands: Brand[];
   models: Model[];
@@ -58,7 +57,6 @@ const RepairRow = ({ request, brands, models, colors, accessories, conditions, o
   accessories: Accessory[];
   conditions: Condition[];
   onStatusChange: (requestId: string, newStatus: RepairStatus) => void;
-  onDuplicate: (request: RepairRequest) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const remaining = (request.quote || 0) - (request.downPayment || 0);
@@ -101,9 +99,7 @@ const RepairRow = ({ request, brands, models, colors, accessories, conditions, o
             </Select>
           </TableCell>
            <TableCell className="text-right">
-            <Button variant="outline" size="sm" onClick={() => onDuplicate(request)}>
-              <Copy className="mr-2 h-4 w-4" /> Registrar otro
-            </Button>
+            {/* Action button space */}
           </TableCell>
         </TableRow>
         <CollapsibleContent asChild>
@@ -146,7 +142,7 @@ const RepairRow = ({ request, brands, models, colors, accessories, conditions, o
 };
 
 
-export function RepairList({ requests, setRequests, brands, models, colors, accessories, conditions, onDuplicate }: RepairListProps) {
+export function RepairList({ requests, setRequests, brands, models, colors, accessories, conditions }: RepairListProps) {
   const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
     setRequests(prevRequests =>
       prevRequests.map(req =>
@@ -182,7 +178,6 @@ export function RepairList({ requests, setRequests, brands, models, colors, acce
                 accessories={accessories}
                 conditions={conditions}
                 onStatusChange={handleStatusChange}
-                onDuplicate={onDuplicate}
               />
             ))
           ) : (

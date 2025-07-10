@@ -12,9 +12,7 @@ import { initialBrands, initialModels, initialColors, initialAccessories, initia
 
 export default function Home() {
   const [isClient, setIsClient] = useState(false);
-  const [activeTab, setActiveTab] = useState('repair');
-  const [prefillData, setPrefillData] = useState<Partial<RepairRequestFormValues> | undefined>(undefined);
-
+  
   // State for catalog data
   const [brands, setBrands] = useState<Brand[]>(initialBrands);
   const [models, setModels] = useState<Model[]>(initialModels);
@@ -39,14 +37,6 @@ export default function Home() {
         ...prev
     ]);
   }
-  
-  const handleDuplicateRequest = (request: RepairRequest) => {
-    setPrefillData({
-      clientName: request.clientName,
-      phoneNumbers: request.phoneNumbers,
-    });
-    setActiveTab('repair');
-  };
 
   if (!isClient) {
     return null; // or a loading spinner
@@ -63,7 +53,7 @@ export default function Home() {
           <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
         </header>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs defaultValue="repair" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="repair">
               <Wrench className="mr-2 h-4 w-4" />
@@ -93,8 +83,6 @@ export default function Home() {
                   accessories={accessories}
                   conditions={conditions}
                   onAddRequest={addRepairRequest}
-                  initialData={prefillData}
-                  onFormSubmit={() => setPrefillData(undefined)}
                 />
               </CardContent>
             </Card>
@@ -114,7 +102,6 @@ export default function Home() {
                   colors={colors}
                   accessories={accessories}
                   conditions={conditions}
-                  onDuplicate={handleDuplicateRequest}
                 />
               </CardContent>
             </Card>
