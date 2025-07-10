@@ -38,4 +38,6 @@ export interface RepairRequest {
   pattern?: number[];
   notes?: string;
   createdAt: string;
+  quote?: number;
+  downPayment?: number;
 }

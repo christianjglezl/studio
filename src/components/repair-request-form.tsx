@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import * as z from 'zod';
-import { PlusCircle, Trash2, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { PlusCircle, Trash2, Calendar as CalendarIcon, Clock, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -48,6 +48,22 @@ const formSchema = z.object({
   password: z.string().optional(),
   pattern: z.array(z.number()).optional(),
   notes: z.string().optional(),
+  quote: z.preprocess(
+    (a) => parseFloat(z.string().parse(a)),
+    z.number().positive({ message: 'La cotización debe ser un número positivo.' }).optional()
+  ),
+  downPayment: z.preprocess(
+    (a) => parseFloat(z.string().parse(a)),
+    z.number().nonnegative({ message: 'El anticipo no puede ser negativo.' }).optional()
+  ),
+}).refine(data => {
+    if (data.quote !== undefined && data.downPayment !== undefined) {
+        return data.downPayment <= data.quote;
+    }
+    return true;
+}, {
+    message: "El anticipo no puede ser mayor que la cotización.",
+    path: ["downPayment"],
 });
 
 type RepairRequestFormValues = z.infer<typeof formSchema>;
@@ -115,6 +131,8 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
       accessories: [],
       conditions: [],
       pattern: [],
+      quote: 0,
+      downPayment: 0,
     },
   });
 
@@ -124,6 +142,9 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
   });
   
   const selectedBrandId = form.watch('brandId');
+  const quoteValue = form.watch('quote') || 0;
+  const downPaymentValue = form.watch('downPayment') || 0;
+  const remainingValue = quoteValue - downPaymentValue;
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentDateTime(new Date()), 1000);
@@ -298,6 +319,43 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                   </Card>
               </div>
           </div>
+
+          <Card>
+            <CardHeader><CardTitle className="font-headline">Costos de Reparación</CardTitle></CardHeader>
+            <CardContent className="grid md:grid-cols-3 gap-6">
+                <FormField control={form.control} name="quote" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Precio de Cotización</FormLabel>
+                        <FormControl>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)} className="pl-8" />
+                            </div>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField control={form.control} name="downPayment" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Anticipo</FormLabel>
+                        <FormControl>
+                             <div className="relative">
+                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)} className="pl-8" />
+                            </div>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                <FormItem>
+                    <FormLabel>Restante</FormLabel>
+                    <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input readOnly disabled value={remainingValue.toFixed(2)} className="pl-8 font-bold text-lg" />
+                    </div>
+                </FormItem>
+            </CardContent>
+          </Card>
   
           <div className="flex justify-end">
               <Button type="submit" size="lg">Crear Solicitud de Reparación</Button>
