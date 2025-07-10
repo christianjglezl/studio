@@ -43,17 +43,17 @@ const deviceSchema = z.object({
   colorId: z.string().min(1, { message: 'Por favor, selecciona un color.' }),
   imei: z.string().optional(),
   accessories: z.array(z.string()).optional(),
-  conditions: z.array(z.string()).optional(),
+  conditions: z.array(z.string()).min(1, { message: 'Debes seleccionar al menos una condición.' }),
   password: z.string().optional(),
   pattern: z.array(z.number()).optional(),
   notes: z.string().optional(),
   quote: z.preprocess(
-    (a) => parseFloat(z.string().parse(a)),
-    z.number().positive({ message: 'La cotización debe ser un número positivo.' }).optional()
+    (val) => (val === "" ? undefined : parseFloat(String(val))),
+    z.number({invalid_type_error: "La cotización debe ser un número."}).positive({ message: 'La cotización debe ser un número positivo.' }).optional()
   ),
   downPayment: z.preprocess(
-    (a) => parseFloat(z.string().parse(a)),
-    z.number().nonnegative({ message: 'El anticipo no puede ser negativo.' }).optional()
+    (val) => (val === "" ? undefined : parseFloat(String(val))),
+    z.number({invalid_type_error: "El anticipo debe ser un número."}).nonnegative({ message: 'El anticipo no puede ser negativo.' }).optional()
   ),
 }).refine(data => {
     if (data.quote !== undefined && data.downPayment !== undefined) {
@@ -129,7 +129,7 @@ let nextFolio = 1;
 const newDeviceDefault = {
     brandId: '', modelId: '', colorId: '', imei: '',
     accessories: [], conditions: [], password: '', pattern: [], notes: '',
-    quote: 0, downPayment: 0,
+    quote: undefined, downPayment: undefined,
 };
 
 export function RepairRequestForm({ brands, models, setModels, colors, accessories, conditions, onAddRequest }: RepairRequestFormProps) {
@@ -261,8 +261,8 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
              const remainingValue = quoteValue - downPaymentValue;
 
              return (
-                <Card key={field.id} className="relative border-primary border-2 p-6">
-                    <div className="flex justify-between items-start mb-4">
+                <Card key={field.id} className="relative border-primary border-2 p-6 pt-0">
+                    <div className="flex justify-between items-start mb-4 mt-6">
                        <h3 className="flex items-center gap-2 text-lg font-headline text-primary pt-1">
                           <Smartphone /> Dispositivo #{index + 1}
                        </h3>
@@ -296,10 +296,10 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                                 <CardHeader><CardTitle className="font-headline text-base">Costos de Reparación</CardTitle></CardHeader>
                                 <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                     <FormField control={form.control} name={`devices.${index}.quote`} render={({ field }) => (
-                                        <FormItem><FormLabel>Cotización</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>Cotización</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
                                     )} />
                                     <FormField control={form.control} name={`devices.${index}.downPayment`} render={({ field }) => (
-                                        <FormItem><FormLabel>Anticipo</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>Anticipo (Opcional)</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
                                     )} />
                                     <FormItem>
                                         <FormLabel>Restante</FormLabel>
@@ -314,21 +314,29 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                                 <CardContent className="space-y-4">
                                     <FormField control={form.control} name={`devices.${index}.conditions`} render={() => (
                                         <FormItem>
-                                            <FormLabel>Condición</FormLabel>
-                                            <div className="grid grid-cols-2 gap-2"><FormMessage />
-                                            {conditions.map((item) => (
-                                                <FormField key={item.id} control={form.control} name={`devices.${index}.conditions`} render={({ field }) => (
-                                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0"><FormControl><Checkbox checked={field.value?.includes(item.id)} onCheckedChange={(checked) => {
-                                                        return checked ? field.onChange([...(field.value || []), item.id]) : field.onChange(field.value?.filter((value) => value !== item.id))
-                                                    }} /></FormControl><FormLabel className="font-normal">{item.name}</FormLabel></FormItem>
-                                                )} />
-                                            ))}</div>
+                                            <div className="mb-4">
+                                              <FormLabel>Condición del Dispositivo</FormLabel>
+                                              <FormDescription>Selecciona al menos una condición.</FormDescription>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {conditions.map((item) => (
+                                                    <FormField key={item.id} control={form.control} name={`devices.${index}.conditions`} render={({ field }) => (
+                                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0"><FormControl><Checkbox checked={field.value?.includes(item.id)} onCheckedChange={(checked) => {
+                                                            return checked ? field.onChange([...(field.value || []), item.id]) : field.onChange(field.value?.filter((value) => value !== item.id))
+                                                        }} /></FormControl><FormLabel className="font-normal">{item.name}</FormLabel></FormItem>
+                                                    )} />
+                                                ))}
+                                            </div>
+                                            <FormMessage />
                                         </FormItem>
                                     )} />
                                     <FormField control={form.control} name={`devices.${index}.accessories`} render={() => (
                                         <FormItem>
-                                            <FormLabel>Accesorios</FormLabel>
-                                            <div className="grid grid-cols-2 gap-2"><FormMessage />
+                                            <div className="mb-4">
+                                                <FormLabel>Accesorios Entregados</FormLabel>
+                                                <FormDescription>Selecciona los accesorios que deja el cliente.</FormDescription>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
                                             {accessories.map((item) => (
                                                 <FormField key={item.id} control={form.control} name={`devices.${index}.accessories`} render={({ field }) => (
                                                     <FormItem className="flex flex-row items-start space-x-3 space-y-0"><FormControl><Checkbox checked={field.value?.includes(item.id)} onCheckedChange={(checked) => {
@@ -336,6 +344,7 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                                                     }} /></FormControl><FormLabel className="font-normal">{item.name}</FormLabel></FormItem>
                                                 )} />
                                             ))}</div>
+                                             <FormMessage />
                                         </FormItem>
                                     )} />
                                     <FormField control={form.control} name={`devices.${index}.notes`} render={({ field }) => (
