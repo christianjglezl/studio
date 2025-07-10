@@ -213,7 +213,7 @@ export function RepairRequestForm({
       toast({
         title: '¡Registro Actualizado!',
         description: `El registro para ${data.clientName} ha sido actualizado.`,
-        className: 'bg-primary text-primary-foreground',
+        variant: 'success',
       });
       onFormClose?.();
     } else {
@@ -231,7 +231,7 @@ export function RepairRequestForm({
       toast({
         title: `¡${data.devices.length} Dispositivo(s) Registrado(s)!`,
         description: `Los dispositivos para ${data.clientName} se han añadido.`,
-        className: 'bg-primary text-primary-foreground',
+        variant: 'success',
       });
       
       form.reset({
@@ -352,9 +352,9 @@ export function RepairRequestForm({
              const isOpen = openDevices[index] ?? false;
 
              return (
-                <Collapsible key={field.id} open={isOpen} onOpenChange={() => handleToggleDevice(index)}>
-                <Card className="border-primary border-2 p-0">
-                    <div className="flex justify-between items-start mt-6 mb-4 px-6">
+                <Collapsible key={field.id} open={isOpen} onOpenChange={() => handleToggleDevice(index)} className="group">
+                <Card className="border-primary border-2 p-0 overflow-hidden">
+                     <div className="flex justify-between items-start mt-6 mb-4 px-6">
                        <CollapsibleTrigger asChild>
                        <button type="button" className="flex items-center gap-2 text-lg font-headline text-primary pt-1 w-full">
                           {isOpen ? <ChevronUp /> : <ChevronDown />}
@@ -367,7 +367,7 @@ export function RepairRequestForm({
                          </Button>
                        )}
                     </div>
-                    <CollapsibleContent forceMount={isEditing} className={cn("overflow-hidden", !isOpen && "hidden")}>
+                    <CollapsibleContent forceMount={isEditing}>
                         <div className="grid md:grid-cols-2 gap-8 p-6 pt-0">
                             <div className="space-y-6">
                                 <Card>
