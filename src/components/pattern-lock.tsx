@@ -75,14 +75,17 @@ export function PatternLock({ name, className }: PatternLockProps) {
 
     // Draw lines
     if (pattern.length > 1) {
-      ctx.beginPath();
-      ctx.moveTo(dots[pattern[0]].x, dots[pattern[0]].y);
-      for (let i = 1; i < pattern.length; i++) {
-        ctx.lineTo(dots[pattern[i]].x, dots[pattern[i]].y);
+      // Safety check: ensure dots array is populated and pattern indices are valid
+      if (dots.length > 0 && pattern.every(p => dots[p])) {
+        ctx.beginPath();
+        ctx.moveTo(dots[pattern[0]].x, dots[pattern[0]].y);
+        for (let i = 1; i < pattern.length; i++) {
+          ctx.lineTo(dots[pattern[i]].x, dots[pattern[i]].y);
+        }
+        ctx.strokeStyle = accentColor;
+        ctx.lineWidth = LINE_WIDTH;
+        ctx.stroke();
       }
-      ctx.strokeStyle = accentColor;
-      ctx.lineWidth = LINE_WIDTH;
-      ctx.stroke();
     }
 
     // Draw dots
@@ -104,7 +107,10 @@ export function PatternLock({ name, className }: PatternLockProps) {
   };
 
   useEffect(() => {
-    draw();
+    // Only draw if dots are calculated
+    if (dots.length > 0) {
+      draw();
+    }
   }, [pattern, dots]);
 
   const getDotFromCoordinates = (x: number, y: number) => {

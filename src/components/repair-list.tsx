@@ -70,7 +70,7 @@ const RepairRow = ({
 
   return (
     <Collapsible asChild key={request.id} open={isOpen} onOpenChange={setIsOpen}>
-      <TableBody>
+      <>
         <TableRow className="align-middle">
           <TableCell>
             <CollapsibleTrigger asChild>
@@ -146,7 +146,7 @@ const RepairRow = ({
             </TableCell>
           </TableRow>
         </CollapsibleContent>
-      </TableBody>
+      </>
     </Collapsible>
   );
 };
@@ -174,7 +174,7 @@ export function RepairList({ requests, setRequests, brands, models, setModels, c
   return (
     <div className="rounded-md border">
       <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent forceMount className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Solicitud de Reparación (Folio: {String(editingRequest?.folio).padStart(4, '0')})</DialogTitle>
           </DialogHeader>
@@ -206,29 +206,29 @@ export function RepairList({ requests, setRequests, brands, models, setModels, c
           </TableRow>
         </TableHeader>
         
-        {requests.length > 0 ? (
-          requests.map(request => (
-            <RepairRow 
-              key={request.id}
-              request={request}
-              brands={brands}
-              models={models}
-              colors={colors}
-              accessories={accessories}
-              conditions={conditions}
-              onStatusChange={handleStatusChange}
-              onEdit={handleEdit}
-            />
-          ))
-        ) : (
-           <TableBody>
-            <TableRow>
-              <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
-                No hay solicitudes de reparación registradas.
-              </TableCell>
-            </TableRow>
-           </TableBody>
-        )}
+        <TableBody>
+            {requests.length > 0 ? (
+              requests.map(request => (
+                <RepairRow 
+                  key={request.id}
+                  request={request}
+                  brands={brands}
+                  models={models}
+                  colors={colors}
+                  accessories={accessories}
+                  conditions={conditions}
+                  onStatusChange={handleStatusChange}
+                  onEdit={handleEdit}
+                />
+              ))
+            ) : (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
+                    No hay solicitudes de reparación registradas.
+                  </TableCell>
+                </TableRow>
+            )}
+        </TableBody>
       </Table>
     </div>
   );
