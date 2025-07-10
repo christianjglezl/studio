@@ -258,6 +258,43 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                           )} />
                       </CardContent>
                   </Card>
+                  
+                  <Card>
+                    <CardHeader><CardTitle className="font-headline">Costos de Reparación</CardTitle></CardHeader>
+                    <CardContent className="grid md:grid-cols-3 gap-6">
+                        <FormField control={form.control} name="quote" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Precio de Cotización</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)} className="pl-8" />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="downPayment" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Anticipo</FormLabel>
+                                <FormControl>
+                                     <div className="relative">
+                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)} className="pl-8" />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormItem>
+                            <FormLabel>Restante</FormLabel>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input readOnly disabled value={remainingValue.toFixed(2)} className="pl-8 font-bold text-lg" />
+                            </div>
+                        </FormItem>
+                    </CardContent>
+                  </Card>
               </div>
               <div className="space-y-6">
                   <Card>
@@ -323,43 +360,6 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                   </Card>
               </div>
           </div>
-
-          <Card>
-            <CardHeader><CardTitle className="font-headline">Costos de Reparación</CardTitle></CardHeader>
-            <CardContent className="grid md:grid-cols-3 gap-6">
-                <FormField control={form.control} name="quote" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Precio de Cotización</FormLabel>
-                        <FormControl>
-                            <div className="relative">
-                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)} className="pl-8" />
-                            </div>
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="downPayment" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Anticipo</FormLabel>
-                        <FormControl>
-                             <div className="relative">
-                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)} className="pl-8" />
-                            </div>
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <FormItem>
-                    <FormLabel>Restante</FormLabel>
-                    <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input readOnly disabled value={remainingValue.toFixed(2)} className="pl-8 font-bold text-lg" />
-                    </div>
-                </FormItem>
-            </CardContent>
-          </Card>
   
           <div className="flex justify-end">
               <Button type="submit" size="lg">Crear Solicitud de Reparación</Button>
