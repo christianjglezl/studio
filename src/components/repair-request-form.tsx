@@ -261,18 +261,18 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
              const remainingValue = quoteValue - downPaymentValue;
 
              return (
-                <Card key={field.id} className="relative pt-8 border-primary border-2">
-                    <CardHeader className="absolute top-2 left-2 p-0">
-                       <h3 className="flex items-center gap-2 text-lg font-headline text-primary">
+                <Card key={field.id} className="relative border-primary border-2 p-6">
+                    <div className="flex justify-between items-start mb-4">
+                       <h3 className="flex items-center gap-2 text-lg font-headline text-primary pt-1">
                           <Smartphone /> Dispositivo #{index + 1}
                        </h3>
-                    </CardHeader>
-                    {deviceFields.length > 1 && (
-                      <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeDevice(index)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <CardContent className="grid md:grid-cols-2 gap-8">
+                       {deviceFields.length > 1 && (
+                         <Button type="button" variant="destructive" size="icon" className="h-7 w-7" onClick={() => removeDevice(index)}>
+                           <Trash2 className="h-4 w-4" />
+                         </Button>
+                       )}
+                    </div>
+                    <CardContent className="grid md:grid-cols-2 gap-8 p-0">
                         <div className="space-y-6">
                             <Card>
                                 <CardHeader><CardTitle className="font-headline text-base">Información del Dispositivo</CardTitle></CardHeader>
