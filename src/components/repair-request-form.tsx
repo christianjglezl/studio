@@ -169,31 +169,26 @@ export function RepairRequestForm({
 
   useEffect(() => {
     if (isEditing && initialData) {
-      removeDevice(); // Clear default device field
-      appendDevice({
-        brandId: initialData.brandId,
-        modelId: initialData.modelId,
-        colorId: initialData.colorId,
-        imei: initialData.imei,
-        accessories: initialData.accessories,
-        conditions: initialData.conditions,
-        password: initialData.password,
-        pattern: initialData.pattern,
-        notes: initialData.notes,
-        quote: initialData.quote,
-        downPayment: initialData.downPayment,
-      });
-
-      // Reset client info and phones
       form.reset({
         clientName: initialData.clientName,
         phoneNumbers: initialData.phoneNumbers,
-        devices: form.getValues('devices') // Keep the devices we just set
+        devices: [{
+            brandId: initialData.brandId,
+            modelId: initialData.modelId,
+            colorId: initialData.colorId,
+            imei: initialData.imei,
+            accessories: initialData.accessories,
+            conditions: initialData.conditions,
+            password: initialData.password,
+            pattern: initialData.pattern,
+            notes: initialData.notes,
+            quote: initialData.quote,
+            downPayment: initialData.downPayment,
+        }]
       });
-
       setOpenDevices({0: true});
     }
-  }, [initialData, isEditing, form, appendDevice, removeDevice]);
+  }, [initialData, isEditing, form]);
 
 
   
@@ -357,7 +352,7 @@ export function RepairRequestForm({
              const isOpen = openDevices[index] ?? false;
 
              return (
-                <Collapsible key={field.id} open={isOpen} onOpenChange={() => handleToggleDevice(index)} asChild>
+                <Collapsible key={field.id} open={isOpen} onOpenChange={() => handleToggleDevice(index)}>
                 <Card className="border-primary border-2 p-0">
                     <div className="flex justify-between items-start mt-6 mb-4 px-6">
                        <CollapsibleTrigger asChild>
@@ -392,8 +387,7 @@ export function RepairRequestForm({
                                         )} />
                                     </CardContent>
                                 </Card>
-
-                                <Card>
+                                 <Card>
                                     <CardHeader><CardTitle className="font-headline text-base">Costos de Reparación</CardTitle></CardHeader>
                                     <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                         <FormField control={form.control} name={`devices.${index}.quote`} render={({ field }) => (
