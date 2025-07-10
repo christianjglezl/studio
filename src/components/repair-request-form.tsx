@@ -216,19 +216,19 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
   };
 
   const handleAddDevice = () => {
-      setOpenDevices(prev => {
-          const newOpenDevices = { ...prev };
-          Object.keys(newOpenDevices).forEach(key => {
-              newOpenDevices[Number(key)] = false;
-          });
-          newOpenDevices[deviceFields.length] = true;
-          return newOpenDevices;
-      });
-      appendDevice(newDeviceDefault);
+    setOpenDevices(prev => {
+        const newOpenDevices = { ...prev };
+        Object.keys(newOpenDevices).forEach(key => {
+            newOpenDevices[Number(key)] = false;
+        });
+        newOpenDevices[deviceFields.length] = true;
+        return newOpenDevices;
+    });
+    appendDevice(newDeviceDefault);
   };
   
-  const handleToggleDevice = (index: number) => {
-    setOpenDevices(prev => ({...prev, [index]: !prev[index]}));
+  const handleToggleDevice = (index: number, open: boolean) => {
+    setOpenDevices(prev => ({...prev, [index]: open}));
   };
 
   return (
@@ -282,7 +282,7 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
              const isOpen = openDevices[index] ?? false;
 
              return (
-                <Collapsible key={field.id} open={isOpen} onOpenChange={() => handleToggleDevice(index)} asChild>
+                <Collapsible key={field.id} open={isOpen} onOpenChange={(open) => handleToggleDevice(index, open)} asChild>
                 <Card className="border-primary border-2 p-0">
                     <div className="flex justify-between items-start mb-4 mt-6 px-6">
                        <CollapsibleTrigger asChild>
