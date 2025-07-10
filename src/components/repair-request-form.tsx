@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import * as z from 'zod';
-import { PlusCircle, Trash2, Calendar as CalendarIcon, Clock, DollarSign, RefreshCw, Smartphone } from 'lucide-react';
+import { PlusCircle, Trash2, Calendar as CalendarIcon, Clock, DollarSign, RefreshCw, Smartphone, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -36,6 +36,8 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
 
 const deviceSchema = z.object({
   brandId: z.string().min(1, { message: 'Por favor, selecciona una marca.' }),
@@ -48,11 +50,11 @@ const deviceSchema = z.object({
   pattern: z.array(z.number()).optional(),
   notes: z.string().optional(),
   quote: z.preprocess(
-    (val) => (val === "" ? undefined : parseFloat(String(val))),
-    z.number({invalid_type_error: "La cotización debe ser un número."}).positive({ message: 'La cotización debe ser un número positivo.' }).optional()
+    (val) => (val === "" || val === undefined ? 0 : parseFloat(String(val))),
+    z.number({invalid_type_error: "La cotización debe ser un número."}).nonnegative({ message: 'La cotización no puede ser negativa.' }).optional()
   ),
   downPayment: z.preprocess(
-    (val) => (val === "" ? undefined : parseFloat(String(val))),
+    (val) => (val === "" || val === undefined ? 0 : parseFloat(String(val))),
     z.number({invalid_type_error: "El anticipo debe ser un número."}).nonnegative({ message: 'El anticipo no puede ser negativo.' }).optional()
   ),
 }).refine(data => {
@@ -129,14 +131,15 @@ let nextFolio = 1;
 const newDeviceDefault = {
     brandId: '', modelId: '', colorId: '', imei: '',
     accessories: [], conditions: [], password: '', pattern: [], notes: '',
-    quote: undefined, downPayment: undefined,
+    quote: 0, downPayment: 0,
 };
 
 export function RepairRequestForm({ brands, models, setModels, colors, accessories, conditions, onAddRequest }: RepairRequestFormProps) {
   const { toast } = useToast();
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [addingModel, setAddingModel] = useState<{ open: boolean, index: number, brandId: string }>({ open: false, index: -1, brandId: '' });
-  
+  const [openDevices, setOpenDevices] = useState<{ [key: number]: boolean }>({0: true});
+
   const form = useForm<RepairRequestFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -186,6 +189,7 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
         phoneNumbers: [{ value: '' }],
         devices: [newDeviceDefault]
     });
+    setOpenDevices({ 0: true });
   }
 
   const handleModelChange = (value: string, index: number) => {
@@ -209,6 +213,22 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
         form.setValue(`devices.${addingModel.index}.modelId`, newModel.id);
         setAddingModel({ open: false, index: -1, brandId: '' });
     }
+  };
+
+  const handleAddDevice = () => {
+      setOpenDevices(prev => {
+          const newOpenDevices = { ...prev };
+          Object.keys(newOpenDevices).forEach(key => {
+              newOpenDevices[Number(key)] = false;
+          });
+          newOpenDevices[deviceFields.length] = true;
+          return newOpenDevices;
+      });
+      appendDevice(newDeviceDefault);
+  };
+  
+  const handleToggleDevice = (index: number) => {
+    setOpenDevices(prev => ({...prev, [index]: !prev[index]}));
   };
 
   return (
@@ -259,126 +279,134 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
              const quoteValue = watchedDevices[index]?.quote || 0;
              const downPaymentValue = watchedDevices[index]?.downPayment || 0;
              const remainingValue = quoteValue - downPaymentValue;
+             const isOpen = openDevices[index] ?? false;
 
              return (
-                <Card key={field.id} className="relative border-primary border-2 p-6 pt-0">
-                    <div className="flex justify-between items-start mb-4 mt-6">
-                       <h3 className="flex items-center gap-2 text-lg font-headline text-primary pt-1">
+                <Collapsible key={field.id} open={isOpen} onOpenChange={() => handleToggleDevice(index)} asChild>
+                <Card className="border-primary border-2 p-0">
+                    <div className="flex justify-between items-start mb-4 mt-6 px-6">
+                       <CollapsibleTrigger asChild>
+                       <button type="button" className="flex items-center gap-2 text-lg font-headline text-primary pt-1 w-full">
+                          {isOpen ? <ChevronUp /> : <ChevronDown />}
                           <Smartphone /> Dispositivo #{index + 1}
-                       </h3>
+                       </button>
+                       </CollapsibleTrigger>
                        {deviceFields.length > 1 && (
                          <Button type="button" variant="destructive" size="icon" className="h-7 w-7" onClick={() => removeDevice(index)}>
                            <Trash2 className="h-4 w-4" />
                          </Button>
                        )}
                     </div>
-                    <CardContent className="grid md:grid-cols-2 gap-8 p-0">
-                        <div className="space-y-6">
-                            <Card>
-                                <CardHeader><CardTitle className="font-headline text-base">Información del Dispositivo</CardTitle></CardHeader>
-                                <CardContent className="space-y-4">
-                                     <FormField control={form.control} name={`devices.${index}.brandId`} render={({ field: brandField }) => (
-                                        <FormItem><FormLabel>Marca</FormLabel><Select onValueChange={(val) => { brandField.onChange(val); form.setValue(`devices.${index}.modelId`, '')}} value={brandField.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona una marca" /></SelectTrigger></FormControl><SelectContent>{brands.map(brand => (<SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
-                                    )} />
-                                     <FormField control={form.control} name={`devices.${index}.modelId`} render={({ field }) => (
-                                        <FormItem><FormLabel>Modelo</FormLabel><Select onValueChange={(val) => handleModelChange(val, index)} value={field.value} disabled={!selectedBrandId}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona un modelo" /></SelectTrigger></FormControl><SelectContent>{filteredModels.map(model => (<SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>))} <SelectItem value="add-new" className="text-primary font-medium">Añadir nuevo modelo...</SelectItem></SelectContent></Select><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={form.control} name={`devices.${index}.colorId`} render={({ field }) => (
-                                        <FormItem><FormLabel>Color</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona un color" /></SelectTrigger></FormControl><SelectContent>{colors.map(color => (<SelectItem key={color.id} value={color.id}>{color.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={form.control} name={`devices.${index}.imei`} render={({ field }) => (
-                                        <FormItem><FormLabel>IMEI (Opcional)</FormLabel><FormControl><Input placeholder="IMEI del dispositivo" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                </CardContent>
-                            </Card>
+                    <CollapsibleContent asChild>
+                        <CardContent className="grid md:grid-cols-2 gap-8 p-6 pt-0">
+                            <div className="space-y-6">
+                                <Card>
+                                    <CardHeader><CardTitle className="font-headline text-base">Información del Dispositivo</CardTitle></CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <FormField control={form.control} name={`devices.${index}.brandId`} render={({ field: brandField }) => (
+                                            <FormItem><FormLabel>Marca</FormLabel><Select onValueChange={(val) => { brandField.onChange(val); form.setValue(`devices.${index}.modelId`, '')}} value={brandField.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona una marca" /></SelectTrigger></FormControl><SelectContent>{brands.map(brand => (<SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name={`devices.${index}.modelId`} render={({ field }) => (
+                                            <FormItem><FormLabel>Modelo</FormLabel><Select onValueChange={(val) => handleModelChange(val, index)} value={field.value} disabled={!selectedBrandId}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona un modelo" /></SelectTrigger></FormControl><SelectContent>{filteredModels.map(model => (<SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>))} <SelectItem value="add-new" className="text-primary font-medium">Añadir nuevo modelo...</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name={`devices.${index}.colorId`} render={({ field }) => (
+                                            <FormItem><FormLabel>Color</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona un color" /></SelectTrigger></FormControl><SelectContent>{colors.map(color => (<SelectItem key={color.id} value={color.id}>{color.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name={`devices.${index}.imei`} render={({ field }) => (
+                                            <FormItem><FormLabel>IMEI (Opcional)</FormLabel><FormControl><Input placeholder="IMEI del dispositivo" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                    </CardContent>
+                                </Card>
 
-                             <Card>
-                                <CardHeader><CardTitle className="font-headline text-base">Costos de Reparación</CardTitle></CardHeader>
-                                <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                    <FormField control={form.control} name={`devices.${index}.quote`} render={({ field }) => (
-                                        <FormItem><FormLabel>Cotización</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={form.control} name={`devices.${index}.downPayment`} render={({ field }) => (
-                                        <FormItem><FormLabel>Anticipo (Opcional)</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <FormItem>
-                                        <FormLabel>Restante</FormLabel>
-                                        <div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input readOnly disabled value={remainingValue.toFixed(2)} className="pl-8 font-bold text-lg" /></div>
-                                    </FormItem>
-                                </CardContent>
-                            </Card>
-                        </div>
-                        <div className="space-y-6">
-                            <Card>
-                                <CardHeader><CardTitle className="font-headline text-base">Condición y Accesorios</CardTitle></CardHeader>
-                                <CardContent className="space-y-4">
-                                    <FormField control={form.control} name={`devices.${index}.conditions`} render={() => (
+                                <Card>
+                                    <CardHeader><CardTitle className="font-headline text-base">Costos de Reparación</CardTitle></CardHeader>
+                                    <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                        <FormField control={form.control} name={`devices.${index}.quote`} render={({ field }) => (
+                                            <FormItem><FormLabel>Cotización</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name={`devices.${index}.downPayment`} render={({ field }) => (
+                                            <FormItem><FormLabel>Anticipo (Opcional)</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
+                                        )} />
                                         <FormItem>
-                                            <div className="mb-4">
-                                              <FormLabel>Condición del Dispositivo</FormLabel>
-                                              <FormDescription>Selecciona al menos una condición.</FormDescription>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {conditions.map((item) => (
-                                                    <FormField key={item.id} control={form.control} name={`devices.${index}.conditions`} render={({ field }) => (
+                                            <FormLabel>Restante</FormLabel>
+                                            <div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input readOnly disabled value={remainingValue.toFixed(2)} className="pl-8 font-bold text-lg" /></div>
+                                        </FormItem>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                            <div className="space-y-6">
+                                <Card>
+                                    <CardHeader><CardTitle className="font-headline text-base">Condición y Accesorios</CardTitle></CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <FormField control={form.control} name={`devices.${index}.conditions`} render={() => (
+                                            <FormItem>
+                                                <div className="mb-4">
+                                                <FormLabel>Condición del Dispositivo</FormLabel>
+                                                <FormDescription>Selecciona al menos una condición.</FormDescription>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {conditions.map((item) => (
+                                                        <FormField key={item.id} control={form.control} name={`devices.${index}.conditions`} render={({ field }) => (
+                                                            <FormItem className="flex flex-row items-start space-x-3 space-y-0"><FormControl><Checkbox checked={field.value?.includes(item.id)} onCheckedChange={(checked) => {
+                                                                return checked ? field.onChange([...(field.value || []), item.id]) : field.onChange(field.value?.filter((value) => value !== item.id))
+                                                            }} /></FormControl><FormLabel className="font-normal">{item.name}</FormLabel></FormItem>
+                                                        )} />
+                                                    ))}
+                                                </div>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={form.control} name={`devices.${index}.accessories`} render={() => (
+                                            <FormItem>
+                                                <div className="mb-4">
+                                                    <FormLabel>Accesorios Entregados</FormLabel>
+                                                    <FormDescription>Selecciona los accesorios que deja el cliente.</FormDescription>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                {accessories.map((item) => (
+                                                    <FormField key={item.id} control={form.control} name={`devices.${index}.accessories`} render={({ field }) => (
                                                         <FormItem className="flex flex-row items-start space-x-3 space-y-0"><FormControl><Checkbox checked={field.value?.includes(item.id)} onCheckedChange={(checked) => {
                                                             return checked ? field.onChange([...(field.value || []), item.id]) : field.onChange(field.value?.filter((value) => value !== item.id))
                                                         }} /></FormControl><FormLabel className="font-normal">{item.name}</FormLabel></FormItem>
                                                     )} />
-                                                ))}
-                                            </div>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name={`devices.${index}.accessories`} render={() => (
-                                        <FormItem>
-                                            <div className="mb-4">
-                                                <FormLabel>Accesorios Entregados</FormLabel>
-                                                <FormDescription>Selecciona los accesorios que deja el cliente.</FormDescription>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                            {accessories.map((item) => (
-                                                <FormField key={item.id} control={form.control} name={`devices.${index}.accessories`} render={({ field }) => (
-                                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0"><FormControl><Checkbox checked={field.value?.includes(item.id)} onCheckedChange={(checked) => {
-                                                        return checked ? field.onChange([...(field.value || []), item.id]) : field.onChange(field.value?.filter((value) => value !== item.id))
-                                                    }} /></FormControl><FormLabel className="font-normal">{item.name}</FormLabel></FormItem>
-                                                )} />
-                                            ))}</div>
-                                             <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name={`devices.${index}.notes`} render={({ field }) => (
-                                        <FormItem><FormLabel>Notas Adicionales</FormLabel><FormControl><Textarea placeholder="Describe cualquier otro problema o accesorio..." {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                </CardContent>
-                            </Card>
-            
-                            <Card>
-                                <CardHeader><CardTitle className="font-headline text-base">Seguridad (Opcional)</CardTitle></CardHeader>
-                                <CardContent className="space-y-4">
-                                     <FormField control={form.control} name={`devices.${index}.password`} render={({ field }) => (
-                                        <FormItem><FormLabel>Contraseña / PIN</FormLabel><FormControl><Input placeholder="Contraseña o PIN del dispositivo" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={form.control} name={`devices.${index}.pattern`} render={({ field }) => (
-                                         <FormItem>
-                                            <FormLabel>Patrón de Bloqueo</FormLabel>
-                                            <FormControl>
-                                                <PatternLock name={field.name} />
-                                            </FormControl>
-                                            <FormDescription>Dibuja el patrón de desbloqueo si aplica.</FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </CardContent>
+                                                ))}</div>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={form.control} name={`devices.${index}.notes`} render={({ field }) => (
+                                            <FormItem><FormLabel>Notas Adicionales</FormLabel><FormControl><Textarea placeholder="Describe cualquier otro problema o accesorio..." {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                    </CardContent>
+                                </Card>
+                
+                                <Card>
+                                    <CardHeader><CardTitle className="font-headline text-base">Seguridad (Opcional)</CardTitle></CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <FormField control={form.control} name={`devices.${index}.password`} render={({ field }) => (
+                                            <FormItem><FormLabel>Contraseña / PIN</FormLabel><FormControl><Input placeholder="Contraseña o PIN del dispositivo" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name={`devices.${index}.pattern`} render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Patrón de Bloqueo</FormLabel>
+                                                <FormControl>
+                                                    <PatternLock name={field.name} />
+                                                </FormControl>
+                                                <FormDescription>Dibuja el patrón de desbloqueo si aplica.</FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </CardContent>
+                    </CollapsibleContent>
                 </Card>
+                </Collapsible>
              );
           })}
 
           <div className="flex justify-between items-center">
-            <Button type="button" variant="outline" onClick={() => appendDevice(newDeviceDefault)}>
+            <Button type="button" variant="outline" onClick={handleAddDevice}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Agregar Otro Dispositivo
             </Button>
