@@ -215,7 +215,24 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
     }
   };
 
-  const handleAddDevice = () => {
+  const handleAddDevice = async () => {
+    const lastDeviceIndex = deviceFields.length - 1;
+    const result = await form.trigger([
+        `devices.${lastDeviceIndex}.brandId`,
+        `devices.${lastDeviceIndex}.modelId`,
+        `devices.${lastDeviceIndex}.colorId`,
+        `devices.${lastDeviceIndex}.conditions`
+    ]);
+
+    if (!result) {
+        toast({
+            title: 'Formulario Incompleto',
+            description: 'Por favor, completa la información del dispositivo actual antes de agregar uno nuevo.',
+            variant: 'destructive',
+        });
+        return;
+    }
+    
     setOpenDevices(prev => {
         const newOpenDevices: { [key: number]: boolean } = {};
         Object.keys(prev).forEach(key => {
@@ -297,7 +314,7 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                          </Button>
                        )}
                     </div>
-                    <CollapsibleContent>
+                    <CollapsibleContent forceMount className={cn("overflow-hidden", !isOpen && "hidden")}>
                         <div className="grid md:grid-cols-2 gap-8 p-6 pt-0">
                             <div className="space-y-6">
                                 <Card>
