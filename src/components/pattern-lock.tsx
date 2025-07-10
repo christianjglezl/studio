@@ -158,7 +158,7 @@ export function PatternLock({ name, className }: PatternLockProps) {
         className="cursor-pointer rounded-lg border bg-card"
       />
       <Button type="button" variant="outline" size="sm" onClick={clearPattern} disabled={pattern.length === 0}>
-        Clear Pattern
+        Limpiar Patrón
       </Button>
     </div>
   );

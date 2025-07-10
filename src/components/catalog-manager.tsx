@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Brand, Model, Color, Accessory, Condition } from '@/lib/types';
 
 interface CatalogManagerProps {
@@ -23,14 +24,16 @@ interface CatalogManagerProps {
   setConditions: React.Dispatch<React.SetStateAction<Condition[]>>;
 }
 
-const AddItemDialog: React.FC<{ onAddItem: (name: string) => void; itemName: string }> = ({ onAddItem, itemName }) => {
+const AddItemDialog: React.FC<{ onAddItem: (name: string, brandId?: string) => void; itemName: string; brands?: Brand[]; hasBrandSelection?: boolean }> = ({ onAddItem, itemName, brands, hasBrandSelection = false }) => {
   const [name, setName] = useState('');
+  const [brandId, setBrandId] = useState<string | undefined>(undefined);
   const [open, setOpen] = useState(false);
 
   const handleAdd = () => {
-    if (name.trim()) {
-      onAddItem(name.trim());
+    if (name.trim() && (!hasBrandSelection || brandId)) {
+      onAddItem(name.trim(), brandId);
       setName('');
+      setBrandId(undefined);
       setOpen(false);
     }
   };
@@ -39,64 +42,86 @@ const AddItemDialog: React.FC<{ onAddItem: (name: string) => void; itemName: str
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New {itemName}
+          <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo {itemName}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New {itemName}</DialogTitle>
+          <DialogTitle>Añadir Nuevo {itemName}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          {hasBrandSelection && brands && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="brand" className="text-right">Marca</Label>
+              <Select onValueChange={setBrandId}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Selecciona una marca" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brands.map(brand => (
+                    <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">Name</Label>
+            <Label htmlFor="name" className="text-right">Nombre</Label>
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
           </div>
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline">Cancelar</Button>
           </DialogClose>
-          <Button onClick={handleAdd}>Add</Button>
+          <Button onClick={handleAdd}>Añadir</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
-const CatalogTable = <T extends { id: string; name: string }>({ title, items, onAddItem, onDeleteItem }: {
+const CatalogTable = <T extends { id: string; name: string }>({ title, items, onAddItem, onDeleteItem, brands, hasBrandSelection }: {
   title: string;
   items: T[];
-  onAddItem: (name: string) => void;
+  onAddItem: (name: string, brandId?: string) => void;
   onDeleteItem: (id: string) => void;
+  brands?: Brand[];
+  hasBrandSelection?: boolean;
 }) => (
   <div>
     <div className="flex justify-end mb-4">
-      <AddItemDialog onAddItem={onAddItem} itemName={title.slice(0, -1)} />
+      <AddItemDialog onAddItem={onAddItem} itemName={title.slice(0, -1)} brands={brands} hasBrandSelection={hasBrandSelection} />
     </div>
     <div className="rounded-md border max-h-96 overflow-y-auto">
       <Table>
         <TableHeader className="sticky top-0 bg-secondary">
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Nombre</TableHead>
+            {hasBrandSelection && <TableHead>Marca</TableHead>}
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.length > 0 ? (
-            items.map((item) => (
+            items.map((item) => {
+              const model = item as unknown as Model;
+              const brand = brands?.find(b => b.id === model.brandId);
+              return (
               <TableRow key={item.id}>
                 <TableCell className="font-medium">{item.name}</TableCell>
+                {hasBrandSelection && <TableCell>{brand?.name || 'N/A'}</TableCell>}
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" onClick={() => onDeleteItem(item.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
-                    <span className="sr-only">Delete</span>
+                    <span className="sr-only">Eliminar</span>
                   </Button>
                 </TableCell>
               </TableRow>
-            ))
+            )})
           ) : (
             <TableRow>
-              <TableCell colSpan={2} className="text-center text-muted-foreground">No {title.toLowerCase()} found.</TableCell>
+              <TableCell colSpan={hasBrandSelection ? 3 : 2} className="text-center text-muted-foreground">No se encontraron {title.toLowerCase()}.</TableCell>
             </TableRow>
           )}
         </TableBody>
@@ -113,8 +138,12 @@ export function CatalogManager({
   conditions, setConditions
 }: CatalogManagerProps) {
   
-  const addItem = <T extends { id: string; name: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>) => (name: string) => {
-    setter(prev => [...prev, { id: crypto.randomUUID(), name } as T]);
+  const addItem = <T extends { id: string; name: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>) => (name: string, brandId?: string) => {
+    const newItem: T = { id: crypto.randomUUID(), name } as T;
+    if (brandId) {
+      (newItem as Model).brandId = brandId;
+    }
+    setter(prev => [...prev, newItem]);
   };
 
   const deleteItem = <T extends { id: string; name: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>) => (id: string) => {
@@ -124,26 +153,26 @@ export function CatalogManager({
   return (
     <Tabs defaultValue="brands" className="w-full">
       <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
-        <TabsTrigger value="brands">Brands</TabsTrigger>
-        <TabsTrigger value="models">Models</TabsTrigger>
-        <TabsTrigger value="colors">Colors</TabsTrigger>
-        <TabsTrigger value="accessories">Accessories</TabsTrigger>
-        <TabsTrigger value="conditions">Conditions</TabsTrigger>
+        <TabsTrigger value="brands">Marcas</TabsTrigger>
+        <TabsTrigger value="models">Modelos</TabsTrigger>
+        <TabsTrigger value="colors">Colores</TabsTrigger>
+        <TabsTrigger value="accessories">Accesorios</TabsTrigger>
+        <TabsTrigger value="conditions">Condiciones</TabsTrigger>
       </TabsList>
       <TabsContent value="brands" className="mt-4">
-        <CatalogTable title="Brands" items={brands} onAddItem={addItem(setBrands)} onDeleteItem={deleteItem(setBrands)} />
+        <CatalogTable title="Marcas" items={brands} onAddItem={addItem(setBrands)} onDeleteItem={deleteItem(setBrands)} />
       </TabsContent>
       <TabsContent value="models" className="mt-4">
-        <CatalogTable title="Models" items={models} onAddItem={addItem(setModels)} onDeleteItem={deleteItem(setModels)} />
+        <CatalogTable title="Modelos" items={models} onAddItem={addItem(setModels)} onDeleteItem={deleteItem(setModels)} brands={brands} hasBrandSelection />
       </TabsContent>
       <TabsContent value="colors" className="mt-4">
-        <CatalogTable title="Colors" items={colors} onAddItem={addItem(setColors)} onDeleteItem={deleteItem(setColors)} />
+        <CatalogTable title="Colores" items={colors} onAddItem={addItem(setColors)} onDeleteItem={deleteItem(setColors)} />
       </TabsContent>
       <TabsContent value="accessories" className="mt-4">
-        <CatalogTable title="Accessories" items={accessories} onAddItem={addItem(setAccessories)} onDeleteItem={deleteItem(setAccessories)} />
+        <CatalogTable title="Accesorios" items={accessories} onAddItem={addItem(setAccessories)} onDeleteItem={deleteItem(setAccessories)} />
       </TabsContent>
       <TabsContent value="conditions" className="mt-4">
-        <CatalogTable title="Conditions" items={conditions} onAddItem={addItem(setConditions)} onDeleteItem={deleteItem(setConditions)} />
+        <CatalogTable title="Condiciones" items={conditions} onAddItem={addItem(setConditions)} onDeleteItem={deleteItem(setConditions)} />
       </TabsContent>
     </Tabs>
   );

@@ -6,6 +6,7 @@ export interface Brand {
 export interface Model {
   id: string;
   name: string;
+  brandId: string;
 }
 
 export interface Color {
