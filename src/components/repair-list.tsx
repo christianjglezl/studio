@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { RepairRequest, RepairStatus, Brand, Model, Color, Accessory, Condition } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { format } from 'date-fns';
@@ -69,8 +69,8 @@ const RepairRow = ({
   const remaining = (request.quote || 0) - (request.downPayment || 0);
 
   return (
-    <Collapsible asChild open={isOpen} onOpenChange={setIsOpen}>
-      <>
+    <Collapsible asChild key={request.id} open={isOpen} onOpenChange={setIsOpen}>
+      <TableBody>
         <TableRow className="align-middle">
           <TableCell>
             <CollapsibleTrigger asChild>
@@ -146,7 +146,7 @@ const RepairRow = ({
             </TableCell>
           </TableRow>
         </CollapsibleContent>
-      </>
+      </TableBody>
     </Collapsible>
   );
 };
@@ -205,29 +205,30 @@ export function RepairList({ requests, setRequests, brands, models, setModels, c
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
-          {requests.length > 0 ? (
-            requests.map(request => (
-              <RepairRow 
-                key={request.id}
-                request={request}
-                brands={brands}
-                models={models}
-                colors={colors}
-                accessories={accessories}
-                conditions={conditions}
-                onStatusChange={handleStatusChange}
-                onEdit={handleEdit}
-              />
-            ))
-          ) : (
+        
+        {requests.length > 0 ? (
+          requests.map(request => (
+            <RepairRow 
+              key={request.id}
+              request={request}
+              brands={brands}
+              models={models}
+              colors={colors}
+              accessories={accessories}
+              conditions={conditions}
+              onStatusChange={handleStatusChange}
+              onEdit={handleEdit}
+            />
+          ))
+        ) : (
+           <TableBody>
             <TableRow>
               <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
                 No hay solicitudes de reparación registradas.
               </TableCell>
             </TableRow>
-          )}
-        </TableBody>
+           </TableBody>
+        )}
       </Table>
     </div>
   );
