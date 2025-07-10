@@ -9,22 +9,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import type { RepairRequest, RepairStatus, Brand, Model, Color, Accessory, Condition } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Pencil } from 'lucide-react';
+import { RepairRequestForm } from './repair-request-form';
 
 interface RepairListProps {
   requests: RepairRequest[];
   setRequests: React.Dispatch<React.SetStateAction<RepairRequest[]>>;
   brands: Brand[];
   models: Model[];
+  setModels: React.Dispatch<React.SetStateAction<Model[]>>;
   colors: Color[];
   accessories: Accessory[];
   conditions: Condition[];
@@ -49,7 +51,11 @@ const getEntityNames = <T extends { id: string; name: string }>(ids: string[] = 
     return ids.map(id => getEntityName(id, entities)).join(', ');
 };
 
-const RepairRow = ({ request, brands, models, colors, accessories, conditions, onStatusChange }: {
+const RepairRow = ({ 
+  request, 
+  brands, models, colors, accessories, conditions, 
+  onStatusChange, onEdit
+}: {
   request: RepairRequest;
   brands: Brand[];
   models: Model[];
@@ -57,6 +63,7 @@ const RepairRow = ({ request, brands, models, colors, accessories, conditions, o
   accessories: Accessory[];
   conditions: Condition[];
   onStatusChange: (requestId: string, newStatus: RepairStatus) => void;
+  onEdit: (request: RepairRequest) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const remaining = (request.quote || 0) - (request.downPayment || 0);
@@ -99,7 +106,10 @@ const RepairRow = ({ request, brands, models, colors, accessories, conditions, o
             </Select>
           </TableCell>
            <TableCell className="text-right">
-            {/* Action button space */}
+             <Button variant="ghost" size="icon" onClick={() => onEdit(request)}>
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Editar</span>
+             </Button>
           </TableCell>
         </TableRow>
         <CollapsibleContent asChild>
@@ -142,7 +152,9 @@ const RepairRow = ({ request, brands, models, colors, accessories, conditions, o
 };
 
 
-export function RepairList({ requests, setRequests, brands, models, colors, accessories, conditions }: RepairListProps) {
+export function RepairList({ requests, setRequests, brands, models, setModels, colors, accessories, conditions }: RepairListProps) {
+  const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
+
   const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
     setRequests(prevRequests =>
       prevRequests.map(req =>
@@ -150,9 +162,36 @@ export function RepairList({ requests, setRequests, brands, models, colors, acce
       )
     );
   };
+  
+  const handleEdit = (request: RepairRequest) => {
+    setEditingRequest(request);
+  }
+  
+  const handleUpdate = (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => {
+    setRequests(prev => prev.map(req => req.id === id ? { ...req, ...data } : req));
+  }
 
   return (
     <div className="rounded-md border">
+      <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Solicitud de Reparación (Folio: {String(editingRequest?.folio).padStart(4, '0')})</DialogTitle>
+          </DialogHeader>
+          <RepairRequestForm
+              brands={brands}
+              models={models}
+              setModels={setModels}
+              colors={colors}
+              accessories={accessories}
+              conditions={conditions}
+              onAddRequest={() => {}} // Not used in edit mode
+              onUpdateRequest={handleUpdate}
+              initialData={editingRequest}
+              onFormClose={() => setEditingRequest(null)}
+          />
+        </DialogContent>
+      </Dialog>
       <Table>
         <TableHeader>
           <TableRow>
@@ -178,6 +217,7 @@ export function RepairList({ requests, setRequests, brands, models, colors, acce
                 accessories={accessories}
                 conditions={conditions}
                 onStatusChange={handleStatusChange}
+                onEdit={handleEdit}
               />
             ))
           ) : (

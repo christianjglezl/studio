@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { HardDrive, Wrench, Smartphone, List } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { RepairRequestForm, type RepairRequestFormValues } from '@/components/repair-request-form';
+import { RepairRequestForm } from '@/components/repair-request-form';
 import { CatalogManager } from '@/components/catalog-manager';
 import { RepairList } from '@/components/repair-list';
 import type { Brand, Model, Color, Accessory, Condition, RepairRequest } from '@/lib/types';
@@ -99,6 +99,7 @@ export default function Home() {
                   setRequests={setRepairRequests}
                   brands={brands}
                   models={models}
+                  setModels={setModels}
                   colors={colors}
                   accessories={accessories}
                   conditions={conditions}

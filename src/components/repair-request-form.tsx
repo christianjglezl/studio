@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import * as z from 'zod';
-import { PlusCircle, Trash2, Calendar as CalendarIcon, Clock, DollarSign, RefreshCw, Smartphone, ChevronDown, ChevronUp } from 'lucide-react';
+import { PlusCircle, Trash2, Calendar as CalendarIcon, Clock, DollarSign, Smartphone, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -84,6 +84,9 @@ interface RepairRequestFormProps {
   accessories: Accessory[];
   conditions: Condition[];
   onAddRequest: (data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => void;
+  onUpdateRequest?: (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => void;
+  initialData?: RepairRequest | null;
+  onFormClose?: () => void;
 }
 
 const AddNewModelDialog: React.FC<{ onAddModel: (name: string, brandId: string) => void, brandId: string }> = ({ onAddModel, brandId }) => {
@@ -134,11 +137,16 @@ const newDeviceDefault = {
     quote: 0, downPayment: 0,
 };
 
-export function RepairRequestForm({ brands, models, setModels, colors, accessories, conditions, onAddRequest }: RepairRequestFormProps) {
+export function RepairRequestForm({ 
+  brands, models, setModels, colors, accessories, conditions, 
+  onAddRequest, onUpdateRequest, initialData = null, onFormClose
+}: RepairRequestFormProps) {
   const { toast } = useToast();
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [addingModel, setAddingModel] = useState<{ open: boolean, index: number, brandId: string }>({ open: false, index: -1, brandId: '' });
   const [openDevices, setOpenDevices] = useState<{ [key: number]: boolean }>({0: true});
+  
+  const isEditing = !!initialData;
 
   const form = useForm<RepairRequestFormValues>({
     resolver: zodResolver(formSchema),
@@ -148,6 +156,29 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
       devices: [newDeviceDefault],
     },
   });
+
+  useEffect(() => {
+    if (isEditing && initialData) {
+      form.reset({
+        clientName: initialData.clientName,
+        phoneNumbers: initialData.phoneNumbers,
+        devices: [{
+          brandId: initialData.brandId,
+          modelId: initialData.modelId,
+          colorId: initialData.colorId,
+          imei: initialData.imei,
+          accessories: initialData.accessories,
+          conditions: initialData.conditions,
+          password: initialData.password,
+          pattern: initialData.pattern,
+          notes: initialData.notes,
+          quote: initialData.quote,
+          downPayment: initialData.downPayment,
+        }]
+      });
+      setOpenDevices({0: true});
+    }
+  }, [initialData, isEditing, form]);
 
   const { fields: phoneFields, append: appendPhone, remove: removePhone } = useFieldArray({
     control: form.control,
@@ -167,29 +198,47 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
   }, []);
 
   function onSubmit(data: RepairRequestFormValues) {
-    data.devices.forEach(deviceData => {
-        const submissionData = {
-          clientName: data.clientName,
-          phoneNumbers: data.phoneNumbers,
-          ...deviceData,
-          folio: nextFolio++,
-          createdAt: new Date().toISOString(),
-        };
-        onAddRequest(submissionData);
-    });
-    
-    toast({
-      title: `¡${data.devices.length} Dispositivo(s) Registrado(s)!`,
-      description: `Los dispositivos para ${data.clientName} se han añadido.`,
-      className: 'bg-primary text-primary-foreground',
-    });
-    
-    form.reset({
-        clientName: '',
-        phoneNumbers: [{ value: '' }],
-        devices: [newDeviceDefault]
-    });
-    setOpenDevices({ 0: true });
+    if (isEditing && initialData && onUpdateRequest) {
+      // Assuming one device per request in edit mode
+      const submissionData = {
+        clientName: data.clientName,
+        phoneNumbers: data.phoneNumbers,
+        ...data.devices[0],
+        folio: initialData.folio,
+        createdAt: initialData.createdAt,
+      };
+      onUpdateRequest(initialData.id, submissionData);
+      toast({
+        title: '¡Registro Actualizado!',
+        description: `El registro para ${data.clientName} ha sido actualizado.`,
+        className: 'bg-primary text-primary-foreground',
+      });
+      onFormClose?.();
+    } else {
+      data.devices.forEach(deviceData => {
+          const submissionData = {
+            clientName: data.clientName,
+            phoneNumbers: data.phoneNumbers,
+            ...deviceData,
+            folio: nextFolio++,
+            createdAt: new Date().toISOString(),
+          };
+          onAddRequest(submissionData);
+      });
+      
+      toast({
+        title: `¡${data.devices.length} Dispositivo(s) Registrado(s)!`,
+        description: `Los dispositivos para ${data.clientName} se han añadido.`,
+        className: 'bg-primary text-primary-foreground',
+      });
+      
+      form.reset({
+          clientName: '',
+          phoneNumbers: [{ value: '' }],
+          devices: [newDeviceDefault]
+      });
+      setOpenDevices({ 0: true });
+    }
   }
 
   const handleModelChange = (value: string, index: number) => {
@@ -252,18 +301,20 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
     <Dialog open={addingModel.open} onOpenChange={(open) => setAddingModel(prev => ({ ...prev, open }))}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <div className="flex justify-between items-center p-2 bg-secondary rounded-lg">
-              <div className='flex items-center gap-4'>
-                  <div className="flex items-center gap-2 text-sm text-secondary-foreground">
-                      <CalendarIcon className="h-4 w-4" />
-                      <span>{format(currentDateTime, 'PPP', { locale: es })}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-secondary-foreground">
-                      <Clock className="h-4 w-4" />
-                      <span>{format(currentDateTime, 'p', { locale: es })}</span>
-                  </div>
-              </div>
-          </div>
+          {!isEditing && (
+            <div className="flex justify-between items-center p-2 bg-secondary rounded-lg">
+                <div className='flex items-center gap-4'>
+                    <div className="flex items-center gap-2 text-sm text-secondary-foreground">
+                        <CalendarIcon className="h-4 w-4" />
+                        <span>{format(currentDateTime, 'PPP', { locale: es })}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-secondary-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>{format(currentDateTime, 'p', { locale: es })}</span>
+                    </div>
+                </div>
+            </div>
+          )}
           
           <Card>
             <CardHeader><CardTitle className="font-headline">Información del Cliente</CardTitle></CardHeader>
@@ -308,7 +359,7 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                           <Smartphone /> Dispositivo #{index + 1}
                        </button>
                        </CollapsibleTrigger>
-                       {deviceFields.length > 1 && (
+                       {deviceFields.length > 1 && !isEditing && (
                          <Button type="button" variant="destructive" size="icon" className="h-7 w-7 mt-1 flex-shrink-0" onClick={() => removeDevice(index)}>
                            <Trash2 className="h-4 w-4" />
                          </Button>
@@ -324,7 +375,7 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                                             <FormItem><FormLabel>Marca</FormLabel><Select onValueChange={(val) => { brandField.onChange(val); form.setValue(`devices.${index}.modelId`, '')}} value={brandField.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona una marca" /></SelectTrigger></FormControl><SelectContent>{brands.map(brand => (<SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                                         )} />
                                         <FormField control={form.control} name={`devices.${index}.modelId`} render={({ field }) => (
-                                            <FormItem><FormLabel>Modelo</FormLabel><Select onValueChange={(val) => handleModelChange(val, index)} value={field.value} disabled={!selectedBrandId}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona un modelo" /></SelectTrigger></FormControl><SelectContent>{filteredModels.map(model => (<SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>))} <SelectItem value="add-new" className="text-primary font-medium">Añadir nuevo modelo...</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                                            <FormItem><FormLabel>Modelo</FormLabel><Select onValueChange={(val) => handleModelChange(val, index)} value={field.value} disabled={!selectedBrandId}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona un modelo" /></SelectTrigger></FormControl><SelectContent>{filteredModels.map(model => (<SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>))} {!isEditing && <SelectItem value="add-new" className="text-primary font-medium">Añadir nuevo modelo...</SelectItem>}</SelectContent></Select><FormMessage /></FormItem>
                                         )} />
                                         <FormField control={form.control} name={`devices.${index}.colorId`} render={({ field }) => (
                                             <FormItem><FormLabel>Color</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecciona un color" /></SelectTrigger></FormControl><SelectContent>{colors.map(color => (<SelectItem key={color.id} value={color.id}>{color.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
@@ -421,19 +472,23 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                 </Collapsible>
              );
           })}
-
+          
           <div className="flex justify-between items-center">
-            <Button type="button" variant="outline" onClick={handleAddDevice}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Agregar Otro Dispositivo
-            </Button>
-            <Button type="submit" size="lg">
-                Guardar
-            </Button>
+            {!isEditing && (
+                <Button type="button" variant="outline" onClick={handleAddDevice}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Agregar Otro Dispositivo
+                </Button>
+            )}
+            <div className={cn(isEditing && 'w-full flex justify-end')}>
+                <Button type="submit" size="lg">
+                    {isEditing ? 'Actualizar Registro' : 'Guardar'}
+                </Button>
+            </div>
           </div>
         </form>
       </Form>
-      {addingModel.brandId && (
+      {addingModel.brandId && !isEditing && (
         <AddNewModelDialog onAddModel={handleAddNewModel} brandId={addingModel.brandId} />
       )}
     </Dialog>
