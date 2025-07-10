@@ -217,8 +217,8 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
 
   const handleAddDevice = () => {
     setOpenDevices(prev => {
-        const newOpenDevices = { ...prev };
-        Object.keys(newOpenDevices).forEach(key => {
+        const newOpenDevices: { [key: number]: boolean } = {};
+        Object.keys(prev).forEach(key => {
             newOpenDevices[Number(key)] = false;
         });
         newOpenDevices[deviceFields.length] = true;
@@ -227,8 +227,8 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
     appendDevice(newDeviceDefault);
   };
   
-  const handleToggleDevice = (index: number, open: boolean) => {
-    setOpenDevices(prev => ({...prev, [index]: open}));
+  const handleToggleDevice = (index: number) => {
+    setOpenDevices(prev => ({...prev, [index]: !prev[index]}));
   };
 
   return (
@@ -282,9 +282,9 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
              const isOpen = openDevices[index] ?? false;
 
              return (
-                <Collapsible key={field.id} open={isOpen} onOpenChange={(open) => handleToggleDevice(index, open)} asChild>
+                <Collapsible key={field.id} open={isOpen} onOpenChange={() => handleToggleDevice(index)} asChild>
                 <Card className="border-primary border-2 p-0">
-                    <div className="flex justify-between items-start mb-4 mt-6 px-6">
+                    <div className="flex justify-between items-start mt-6 mb-4 px-6">
                        <CollapsibleTrigger asChild>
                        <button type="button" className="flex items-center gap-2 text-lg font-headline text-primary pt-1 w-full">
                           {isOpen ? <ChevronUp /> : <ChevronDown />}
@@ -292,7 +292,7 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                        </button>
                        </CollapsibleTrigger>
                        {deviceFields.length > 1 && (
-                         <Button type="button" variant="destructive" size="icon" className="h-7 w-7" onClick={() => removeDevice(index)}>
+                         <Button type="button" variant="destructive" size="icon" className="h-7 w-7 mt-1 flex-shrink-0" onClick={() => removeDevice(index)}>
                            <Trash2 className="h-4 w-4" />
                          </Button>
                        )}
@@ -411,7 +411,7 @@ export function RepairRequestForm({ brands, models, setModels, colors, accessori
                 Agregar Otro Dispositivo
             </Button>
             <Button type="submit" size="lg">
-                Crear Solicitud
+                Guardar
             </Button>
           </div>
         </form>
