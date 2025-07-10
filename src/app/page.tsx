@@ -59,6 +59,7 @@ export default function Home() {
                 <RepairRequestForm 
                   brands={brands}
                   models={models}
+                  setModels={setModels}
                   colors={colors}
                   accessories={accessories}
                   conditions={conditions}
