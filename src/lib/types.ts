@@ -55,3 +55,12 @@ export interface RepairRequest {
   downPayment?: number;
   status: RepairStatus;
 }
+
+export interface CatalogData {
+  brands: Brand[];
+  models: Model[];
+  colors: Color[];
+  accessories: Accessory[];
+  conditions: Condition[];
+  services: Service[];
+}

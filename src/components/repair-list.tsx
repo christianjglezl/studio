@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Select,
@@ -13,24 +14,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { RepairRequest, RepairStatus, Brand, Model, Color, Accessory, Condition, Service } from '@/lib/types';
+import type { RepairRequest, RepairStatus, Brand, Model, Color, Accessory, Condition, Service, CatalogData } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { ChevronDown, Pencil } from 'lucide-react';
+import { ChevronDown, Pencil, Printer } from 'lucide-react';
 import { RepairRequestForm } from './repair-request-form';
+import { Ticket } from './ticket';
 
-interface RepairListProps {
+interface RepairListProps extends CatalogData {
   requests: RepairRequest[];
   setRequests: React.Dispatch<React.SetStateAction<RepairRequest[]>>;
-  brands: Brand[];
-  models: Model[];
   setModels: React.Dispatch<React.SetStateAction<Model[]>>;
-  colors: Color[];
-  accessories: Accessory[];
-  conditions: Condition[];
-  services: Service[];
 }
 
 const statusColors: { [key in RepairStatus]: string } = {
@@ -54,21 +50,18 @@ const getEntityNames = <T extends { id: string; name: string }>(ids: string[] = 
 
 const RepairRow = ({ 
   request, 
-  brands, models, colors, accessories, conditions, services,
-  onStatusChange, onEdit
+  catalog,
+  onStatusChange, onEdit, onPrint
 }: {
   request: RepairRequest;
-  brands: Brand[];
-  models: Model[];
-  colors: Color[];
-  accessories: Accessory[];
-  conditions: Condition[];
-  services: Service[];
+  catalog: CatalogData;
   onStatusChange: (requestId: string, newStatus: RepairStatus) => void;
   onEdit: (request: RepairRequest) => void;
+  onPrint: (request: RepairRequest) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const remaining = (request.quote || 0) - (request.downPayment || 0);
+  const { brands, models, colors, accessories, conditions, services } = catalog;
 
   return (
     <Collapsible asChild key={request.id} open={isOpen} onOpenChange={setIsOpen}>
@@ -111,6 +104,10 @@ const RepairRow = ({
              <Button variant="ghost" size="icon" onClick={() => onEdit(request)}>
                 <Pencil className="h-4 w-4" />
                 <span className="sr-only">Editar</span>
+             </Button>
+             <Button variant="ghost" size="icon" onClick={() => onPrint(request)}>
+                <Printer className="h-4 w-4" />
+                <span className="sr-only">Imprimir Ticket</span>
              </Button>
           </TableCell>
         </TableRow>
@@ -164,6 +161,16 @@ const RepairRow = ({
 
 export function RepairList({ requests, setRequests, brands, models, setModels, colors, accessories, conditions, services }: RepairListProps) {
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
+  const [printingRequest, setPrintingRequest] = useState<RepairRequest | null>(null);
+  
+  const ticketRef = useRef<HTMLDivElement>(null);
+  
+  const catalog: CatalogData = { brands, models, colors, accessories, conditions, services };
+
+  const handlePrint = useReactToPrint({
+      content: () => ticketRef.current,
+      onAfterPrint: () => setPrintingRequest(null),
+  });
 
   const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
     setRequests(prevRequests =>
@@ -177,12 +184,23 @@ export function RepairList({ requests, setRequests, brands, models, setModels, c
     setEditingRequest(request);
   }
   
+  const handleSetUpPrint = (request: RepairRequest) => {
+    setPrintingRequest(request);
+    // useReactToPrint needs a moment for the state to update and the component to render
+    setTimeout(handlePrint, 50);
+  }
+
   const handleUpdate = (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => {
     setRequests(prev => prev.map(req => req.id === id ? { ...req, ...data } : req));
   }
 
   return (
     <div className="rounded-md border">
+      {printingRequest && (
+        <div className="hidden">
+           <Ticket ref={ticketRef} request={printingRequest} catalog={catalog} />
+        </div>
+      )}
       <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
         <DialogContent forceMount className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -223,14 +241,10 @@ export function RepairList({ requests, setRequests, brands, models, setModels, c
                 <RepairRow 
                   key={request.id}
                   request={request}
-                  brands={brands}
-                  models={models}
-                  colors={colors}
-                  accessories={accessories}
-                  conditions={conditions}
-                  services={services}
+                  catalog={catalog}
                   onStatusChange={handleStatusChange}
                   onEdit={handleEdit}
+                  onPrint={handleSetUpPrint}
                 />
               ))
             ) : (
