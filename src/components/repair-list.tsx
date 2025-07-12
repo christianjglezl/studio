@@ -72,6 +72,7 @@ const RepairRow = ({
 
   return (
     <Collapsible asChild key={request.id} open={isOpen} onOpenChange={setIsOpen}>
+      <>
         <TableRow className="align-middle">
           <TableCell>
             <CollapsibleTrigger asChild>
@@ -112,9 +113,10 @@ const RepairRow = ({
                 <span className="sr-only">Editar</span>
              </Button>
           </TableCell>
-          <CollapsibleContent asChild>
-            <tr className="bg-muted/50">
-                <td colSpan={8} className="p-0">
+        </TableRow>
+        <CollapsibleContent asChild>
+            <TableRow className="bg-muted/50">
+                <TableCell colSpan={8} className="p-0">
                   <div className="p-4">
                     <div className="grid md:grid-cols-3 gap-4">
                       <Card>
@@ -151,10 +153,10 @@ const RepairRow = ({
                       </Card>
                     </div>
                   </div>
-                </td>
-            </tr>
-          </CollapsibleContent>
-        </TableRow>
+                </TableCell>
+            </TableRow>
+        </CollapsibleContent>
+      </>
     </Collapsible>
   );
 };
