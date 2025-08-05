@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { HardDrive, Wrench, Smartphone, List } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RepairRequestForm } from '@/components/repair-request-form';
 import { CatalogManager } from '@/components/catalog-manager';
 import { RepairList } from '@/components/repair-list';
-import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service } from '@/lib/types';
+import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, CatalogData } from '@/lib/types';
 import { initialBrands, initialModels, initialColors, initialAccessories, initialConditions, initialServices } from '@/lib/data';
+import { Ticket } from '@/components/ticket';
 
 export default function Home() {
   const [isClient, setIsClient] = useState(false);
@@ -25,7 +27,37 @@ export default function Home() {
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
   const [requestToPrint, setRequestToPrint] = useState<RepairRequest | null>(null);
 
+  const catalog: CatalogData = { brands, models, colors, accessories, conditions, services };
+
+  const handlePrint = (request: RepairRequest) => {
+    const ticketHtml = renderToStaticMarkup(<Ticket request={request} catalog={catalog} />);
+    const printWindow = window.open('', '_blank', 'height=500,width=500,scrollbars=yes');
+
+    if (printWindow) {
+      printWindow.document.write('<html><head><title>Ticket de Reparación</title>');
+      printWindow.document.write('</head><body>');
+      printWindow.document.write(ticketHtml);
+      printWindow.document.write('</body></html>');
+      
+      printWindow.document.close();
+      
+      printWindow.onload = () => {
+        printWindow.focus(); 
+        printWindow.print();
+        printWindow.close();
+      };
+    } else {
+      alert('Por favor, habilita las ventanas emergentes para imprimir el ticket.');
+    }
+  };
   
+  useEffect(() => {
+    if (requestToPrint) {
+      handlePrint(requestToPrint);
+      setRequestToPrint(null); // Clear the request to prevent re-printing
+    }
+  }, [requestToPrint]);
+
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -108,8 +140,7 @@ export default function Home() {
                   accessories={accessories}
                   conditions={conditions}
                   services={services}
-                  requestToPrint={requestToPrint}
-                  clearRequestToPrint={() => setRequestToPrint(null)}
+                  onPrintRequest={handlePrint}
                 />
               </CardContent>
             </Card>

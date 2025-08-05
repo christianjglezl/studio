@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -13,21 +13,19 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { RepairRequest, RepairStatus, Brand, Model, Color, Accessory, Condition, Service, CatalogData } from '@/lib/types';
+import type { RepairRequest, RepairStatus, Model, CatalogData } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ChevronDown, Pencil, Printer } from 'lucide-react';
 import { RepairRequestForm } from './repair-request-form';
-import { Ticket } from './ticket';
 
 interface RepairListProps extends CatalogData {
   requests: RepairRequest[];
   setRequests: React.Dispatch<React.SetStateAction<RepairRequest[]>>;
   setModels: React.Dispatch<React.SetStateAction<Model[]>>;
-  requestToPrint: RepairRequest | null;
-  clearRequestToPrint: () => void;
+  onPrintRequest: (request: RepairRequest) => void;
 }
 
 const statusColors: { [key in RepairStatus]: string } = {
@@ -158,42 +156,11 @@ const RepairRow = ({
 
 export function RepairList({ 
   requests, setRequests, brands, models, setModels, colors, accessories, conditions, services,
-  requestToPrint, clearRequestToPrint
+  onPrintRequest
 }: RepairListProps) {
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
   
   const catalog: CatalogData = { brands, models, colors, accessories, conditions, services };
-
-  const handlePrint = (request: RepairRequest) => {
-    const ticketHtml = renderToStaticMarkup(<Ticket request={request} catalog={catalog} />);
-    
-    const printWindow = window.open('', '_blank', 'height=500,width=500,scrollbars=yes');
-
-    if (printWindow) {
-      printWindow.document.write('<html><head><title>Ticket de Reparación</title>');
-      printWindow.document.write('</head><body>');
-      printWindow.document.write(ticketHtml);
-      printWindow.document.write('</body></html>');
-      
-      printWindow.document.close();
-      
-      // Wait for content to load before printing
-      printWindow.onload = () => {
-        printWindow.focus(); 
-        printWindow.print();
-        printWindow.close();
-      };
-    } else {
-      alert('Por favor, habilita las ventanas emergentes para imprimir el ticket.');
-    }
-  };
-
-  useEffect(() => {
-    if (requestToPrint) {
-      handlePrint(requestToPrint);
-      clearRequestToPrint(); // Clear the request to prevent re-printing on re-renders
-    }
-  }, [requestToPrint, clearRequestToPrint]); // Dependency array ensures this runs only when a new request is ready to be printed
 
   const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
     setRequests(prevRequests =>
@@ -256,7 +223,7 @@ export function RepairList({
                   catalog={catalog}
                   onStatusChange={handleStatusChange}
                   onEdit={handleEdit}
-                  onPrint={handlePrint}
+                  onPrint={onPrintRequest}
                 />
               ))
             ) : (
