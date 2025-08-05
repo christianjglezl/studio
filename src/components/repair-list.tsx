@@ -167,20 +167,17 @@ export function RepairList({
   
   const catalog: CatalogData = { brands, models, colors, accessories, conditions, services };
 
+  const handleAfterPrint = () => {
+    setPrintingRequest(null);
+    if (onPrintComplete) {
+      onPrintComplete();
+    }
+  };
+
   const handlePrint = useReactToPrint({
       content: () => ticketRef.current,
-      onAfterPrint: () => {
-        setPrintingRequest(null);
-        if (onPrintComplete) {
-          onPrintComplete();
-        }
-      },
-      onPrintError: () => {
-        setPrintingRequest(null);
-        if (onPrintComplete) {
-            onPrintComplete();
-        }
-      }
+      onAfterPrint: handleAfterPrint,
+      onPrintError: handleAfterPrint
   });
 
   const handleSetUpPrint = (request: RepairRequest) => {
@@ -195,16 +192,13 @@ export function RepairList({
   }, [justAddedRequest]);
   
   // Effect to trigger print once the state is updated and component is rendered
-  useEffect(() => {
-    if (printingRequest) {
-      // The useReactToPrint hook will now trigger the print dialog.
-      // We wrap it in a timeout to ensure the state has updated and the ticket is rendered.
-      const timer = setTimeout(() => {
+   useEffect(() => {
+    // This effect runs when printingRequest is set.
+    // The `handlePrint` function is called only if the ticketRef is available.
+    if (printingRequest && ticketRef.current) {
         if (handlePrint) {
-          handlePrint();
+            handlePrint();
         }
-      }, 50);
-      return () => clearTimeout(timer);
     }
   }, [printingRequest, handlePrint]);
 
