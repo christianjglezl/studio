@@ -66,11 +66,12 @@ const RepairRow = ({
   const { brands, models, colors, accessories, conditions, services } = catalog;
 
   return (
-    <React.Fragment key={request.id}>
+    <Collapsible asChild key={request.id} open={isOpen} onOpenChange={setIsOpen}>
+      <>
         <TableRow className="align-middle">
           <TableCell>
             <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(!isOpen)}>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
                   <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
                   <span className="sr-only">{isOpen ? "Cerrar" : "Abrir"} detalles</span>
                 </Button>
@@ -112,7 +113,7 @@ const RepairRow = ({
              </Button>
           </TableCell>
         </TableRow>
-        {isOpen && (
+        <CollapsibleContent asChild>
             <TableRow className="bg-muted/50">
                 <TableCell colSpan={8} className="p-0">
                   <div className="p-4">
@@ -153,8 +154,9 @@ const RepairRow = ({
                   </div>
                 </TableCell>
             </TableRow>
-        )}
-    </React.Fragment>
+        </CollapsibleContent>
+      </>
+    </Collapsible>
   );
 };
 
