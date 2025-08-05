@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { useReactToPrint } from 'react-to-print';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Select,
@@ -56,7 +56,7 @@ const RepairRow = ({
   catalog: CatalogData;
   onStatusChange: (requestId: string, newStatus: RepairStatus) => void;
   onEdit: (request: RepairRequest) => void;
-  onPrint: () => void;
+  onPrint: (request: RepairRequest) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const remaining = (request.quote || 0) - (request.downPayment || 0);
@@ -101,7 +101,7 @@ const RepairRow = ({
               <Pencil className="h-4 w-4" />
               <span className="sr-only">Editar</span>
            </Button>
-           <Button variant="ghost" size="icon" onClick={onPrint}>
+           <Button variant="ghost" size="icon" onClick={() => onPrint(request)}>
               <Printer className="h-4 w-4" />
               <span className="sr-only">Imprimir Ticket</span>
            </Button>
@@ -158,26 +158,33 @@ export function RepairList({
   requests, setRequests, brands, models, setModels, colors, accessories, conditions, services,
 }: RepairListProps) {
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
-  const [printingRequest, setPrintingRequest] = useState<RepairRequest | null>(null);
-  
-  const ticketRef = useRef<HTMLDivElement>(null);
   
   const catalog: CatalogData = { brands, models, colors, accessories, conditions, services };
 
-  const handlePrint = useReactToPrint({
-      content: () => ticketRef.current,
-      onAfterPrint: () => setPrintingRequest(null),
-  });
-  
-  const handleSetUpPrint = (request: RepairRequest) => {
-    setPrintingRequest(request);
-  }
-  
-  React.useEffect(() => {
-    if (printingRequest && ticketRef.current) {
-      handlePrint?.();
+  const handlePrint = (request: RepairRequest) => {
+    const ticketHtml = renderToStaticMarkup(<Ticket request={request} catalog={catalog} />);
+    
+    const printWindow = window.open('', '_blank', 'height=500,width=500');
+
+    if (printWindow) {
+      printWindow.document.write('<html><head><title>Ticket de Reparación</title>');
+      // Agrega aquí los estilos si es necesario, o enlaza un CSS
+      printWindow.document.write('</head><body>');
+      printWindow.document.write(ticketHtml);
+      printWindow.document.write('</body></html>');
+      
+      printWindow.document.close();
+      printWindow.focus(); 
+      
+      // Espera a que el contenido se cargue antes de imprimir
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    } else {
+      alert('Por favor, habilita las ventanas emergentes para imprimir el ticket.');
     }
-  }, [printingRequest, handlePrint]);
+  };
 
   const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
     setRequests(prevRequests =>
@@ -197,9 +204,6 @@ export function RepairList({
 
   return (
     <div className="rounded-md border">
-       <div className="hidden">
-        {printingRequest && <div ref={ticketRef}><Ticket request={printingRequest} catalog={catalog} /></div>}
-       </div>
       <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -243,7 +247,7 @@ export function RepairList({
                   catalog={catalog}
                   onStatusChange={handleStatusChange}
                   onEdit={handleEdit}
-                  onPrint={() => handleSetUpPrint(request)}
+                  onPrint={handlePrint}
                 />
               ))
             ) : (
