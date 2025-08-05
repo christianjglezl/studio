@@ -186,18 +186,24 @@ export function RepairList({
   const handleSetUpPrint = (request: RepairRequest) => {
     setPrintingRequest(request);
   }
-
+  
+  // Effect to automatically print when a new request is added
   useEffect(() => {
     if (justAddedRequest) {
       handleSetUpPrint(justAddedRequest);
     }
   }, [justAddedRequest]);
-
+  
+  // Effect to trigger print once the state is updated and component is rendered
   useEffect(() => {
     if (printingRequest) {
+      // The useReactToPrint hook will now trigger the print dialog.
+      // We wrap it in a timeout to ensure the state has updated and the ticket is rendered.
       const timer = setTimeout(() => {
-        handlePrint();
-      }, 50); // Small delay to ensure the component has rendered
+        if (handlePrint) {
+          handlePrint();
+        }
+      }, 50);
       return () => clearTimeout(timer);
     }
   }, [printingRequest, handlePrint]);
@@ -221,11 +227,9 @@ export function RepairList({
 
   return (
     <div className="rounded-md border">
-      {printingRequest && (
-        <div className="hidden">
-           <Ticket ref={ticketRef} request={printingRequest} catalog={catalog} />
-        </div>
-      )}
+      <div className="hidden">
+         {printingRequest && <Ticket ref={ticketRef} request={printingRequest} catalog={catalog} />}
+      </div>
       <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
         <DialogContent forceMount className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
