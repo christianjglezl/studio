@@ -197,9 +197,9 @@ export function RepairList({
 
   return (
     <div className="rounded-md border">
-      <div className="hidden">
-         {printingRequest && <Ticket ref={ticketRef} request={printingRequest} catalog={catalog} />}
-      </div>
+       <div className="hidden">
+        {printingRequest && <div ref={ticketRef}><Ticket request={printingRequest} catalog={catalog} /></div>}
+       </div>
       <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
