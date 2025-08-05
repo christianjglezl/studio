@@ -19,12 +19,12 @@ const getEntityNames = <T extends { id: string; name: string }>(ids: string[] = 
   return ids.map(id => getEntityName(id, entities)).join(', ');
 };
 
-export const Ticket = React.forwardRef<HTMLDivElement, TicketProps>(({ request, catalog }, ref) => {
+export const Ticket = ({ request, catalog }: TicketProps) => {
   const { brands, models, colors, accessories, conditions, services } = catalog;
   const remaining = (request.quote || 0) - (request.downPayment || 0);
 
   return (
-    <div ref={ref} className="p-1 font-mono" style={{ width: '58mm', fontSize: '8px', lineHeight: '1.4' }}>
+    <div className="p-1 font-mono print-container" style={{ width: '58mm', fontSize: '8px', lineHeight: '1.4' }}>
       <style type="text/css" media="print">
         {`
           @page { size: 58mm auto; margin: 2mm; }
@@ -95,6 +95,6 @@ export const Ticket = React.forwardRef<HTMLDivElement, TicketProps>(({ request, 
       </div>
     </div>
   );
-});
+};
 
 Ticket.displayName = 'Ticket';

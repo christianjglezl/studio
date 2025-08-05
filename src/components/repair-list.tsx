@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Select,

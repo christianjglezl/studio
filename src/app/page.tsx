@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { HardDrive, Wrench, Smartphone, List } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,33 +30,18 @@ export default function Home() {
   const catalog: CatalogData = { brands, models, colors, accessories, conditions, services };
 
   const handlePrint = (request: RepairRequest) => {
-    const ticketHtml = renderToStaticMarkup(<Ticket request={request} catalog={catalog} />);
-    const printWindow = window.open('', '_blank', 'height=500,width=500,scrollbars=yes');
-
-    if (printWindow) {
-      printWindow.document.write('<html><head><title>Ticket de Reparación</title>');
-      printWindow.document.write('</head><body>');
-      printWindow.document.write(ticketHtml);
-      printWindow.document.write('</body></html>');
-      
-      printWindow.document.close();
-      
-      printWindow.onload = () => {
-        printWindow.focus(); 
-        printWindow.print();
-        printWindow.close();
-      };
-    } else {
-      alert('Por favor, habilita las ventanas emergentes para imprimir el ticket.');
-    }
+    setRequestToPrint(request);
   };
   
   useEffect(() => {
     if (requestToPrint) {
-      handlePrint(requestToPrint);
-      setRequestToPrint(null); // Clear the request to prevent re-printing
+      // The call to window.print() will trigger the @media print styles
+      window.print();
+      // Clean up after printing
+      setRequestToPrint(null);
     }
   }, [requestToPrint]);
+
 
   useEffect(() => {
     setIsClient(true);
@@ -78,93 +63,100 @@ export default function Home() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 sm:p-8 md:p-12">
-      <div className="w-full max-w-6xl">
-        <header className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Smartphone className="w-8 h-8 text-primary" />
-            <h1 className="text-4xl font-bold font-headline text-primary">TechCheck</h1>
-          </div>
-          <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
-        </header>
-        
-        <Tabs defaultValue="repair" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="repair">
-              <Wrench className="mr-2 h-4 w-4" />
-              Nueva Solicitud de Reparación
-            </TabsTrigger>
-             <TabsTrigger value="list">
-              <List className="mr-2 h-4 w-4" />
-              Lista de Reparaciones
-            </TabsTrigger>
-            <TabsTrigger value="catalog">
-              <HardDrive className="mr-2 h-4 w-4" />
-              Catálogo
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="repair">
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-headline">Registrar Nuevo Dispositivo</CardTitle>
-                <CardDescription>Completa el formulario para registrar un nuevo dispositivo para reparación.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RepairRequestForm 
-                  brands={brands}
-                  models={models}
-                  setModels={setModels}
-                  colors={colors}
-                  accessories={accessories}
-                  conditions={conditions}
-                  services={services}
-                  onAddRequest={addRepairRequest}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="list">
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-headline">Lista de Reparaciones</CardTitle>
-                <CardDescription>Ver y gestionar todas las solicitudes de reparación registradas.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RepairList 
-                  requests={repairRequests} 
-                  setRequests={setRepairRequests}
-                  brands={brands}
-                  models={models}
-                  setModels={setModels}
-                  colors={colors}
-                  accessories={accessories}
-                  conditions={conditions}
-                  services={services}
-                  onPrintRequest={handlePrint}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="catalog">
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-headline">Gestionar Catálogos</CardTitle>
-                <CardDescription>Agrega o elimina elementos de tus catálogos.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <CatalogManager 
-                  brands={brands} setBrands={setBrands}
-                  models={models} setModels={setModels}
-                  colors={colors} setColors={setColors}
-                  accessories={accessories} setAccessories={setAccessories}
-                  conditions={conditions} setConditions={setConditions}
-                  services={services} setServices={setServices}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </main>
+    <>
+      <main className="flex min-h-screen flex-col items-center p-4 sm:p-8 md:p-12 print:hidden">
+        <div className="w-full max-w-6xl">
+          <header className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <Smartphone className="w-8 h-8 text-primary" />
+              <h1 className="text-4xl font-bold font-headline text-primary">TechCheck</h1>
+            </div>
+            <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
+          </header>
+          
+          <Tabs defaultValue="repair" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="repair">
+                <Wrench className="mr-2 h-4 w-4" />
+                Nueva Solicitud de Reparación
+              </TabsTrigger>
+              <TabsTrigger value="list">
+                <List className="mr-2 h-4 w-4" />
+                Lista de Reparaciones
+              </TabsTrigger>
+              <TabsTrigger value="catalog">
+                <HardDrive className="mr-2 h-4 w-4" />
+                Catálogo
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="repair">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-headline">Registrar Nuevo Dispositivo</CardTitle>
+                  <CardDescription>Completa el formulario para registrar un nuevo dispositivo para reparación.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <RepairRequestForm 
+                    brands={brands}
+                    models={models}
+                    setModels={setModels}
+                    colors={colors}
+                    accessories={accessories}
+                    conditions={conditions}
+                    services={services}
+                    onAddRequest={addRepairRequest}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="list">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-headline">Lista de Reparaciones</CardTitle>
+                  <CardDescription>Ver y gestionar todas las solicitudes de reparación registradas.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <RepairList 
+                    requests={repairRequests} 
+                    setRequests={setRepairRequests}
+                    brands={brands}
+                    models={models}
+                    setModels={setModels}
+                    colors={colors}
+                    accessories={accessories}
+                    conditions={conditions}
+                    services={services}
+                    onPrintRequest={handlePrint}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="catalog">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-headline">Gestionar Catálogos</CardTitle>
+                  <CardDescription>Agrega o elimina elementos de tus catálogos.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <CatalogManager 
+                    brands={brands} setBrands={setBrands}
+                    models={models} setModels={setModels}
+                    colors={colors} setColors={setColors}
+                    accessories={accessories} setAccessories={setAccessories}
+                    conditions={conditions} setConditions={setConditions}
+                    services={services} setServices={setServices}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
+      {requestToPrint && (
+        <div className="hidden print:block">
+          <Ticket request={requestToPrint} catalog={catalog} />
+        </div>
+      )}
+    </>
   );
 }
