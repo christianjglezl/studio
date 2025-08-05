@@ -10,7 +10,14 @@ type CollectionName = 'brands' | 'models' | 'colors' | 'accessories' | 'conditio
 export const getCollection = async <T extends CollectionType>(collectionName: CollectionName): Promise<T[]> => {
     const q = query(collection(db, collectionName));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+
+    if (collectionName !== 'terms') {
+      // Sort by name for all catalogs except terms
+      return data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }
+    // Sort terms by text
+    return data.sort((a, b) => (a.text || '').localeCompare(b.text || ''));
 };
 
 export const addItem = async <T extends Omit<CollectionType, 'id'>>(collectionName: CollectionName, item: T): Promise<string> => {
