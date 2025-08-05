@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, writeBatch, serverTimestamp, getDoc, runTransaction } from 'firebase/firestore';
 import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition, RepairRequest, DeviceInRequest } from '@/lib/types';
@@ -7,17 +8,12 @@ type CollectionName = 'brands' | 'models' | 'colors' | 'accessories' | 'conditio
 
 
 // Generic Functions
-export const getCollection = async <T extends CollectionType>(collectionName: CollectionName): Promise<T[]> => {
-    const q = query(collection(db, collectionName));
+export const getCollection = async <T extends { name?: string, text?: string }>(collectionName: CollectionName): Promise<T[]> => {
+    const isTerms = collectionName === 'terms';
+    const q = query(collection(db, collectionName), orderBy(isTerms ? 'text' : 'name'));
     const querySnapshot = await getDocs(q);
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
-
-    if (collectionName !== 'terms') {
-      // Sort by name for all catalogs except terms
-      return data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    }
-    // Sort terms by text
-    return data.sort((a, b) => (a.text || '').localeCompare(b.text || ''));
+    return data;
 };
 
 export const addItem = async <T extends Omit<CollectionType, 'id'>>(collectionName: CollectionName, item: T): Promise<string> => {
@@ -118,3 +114,5 @@ export const updateRepairRequestWithDevices = async (id: string, data: Omit<Repa
     
     await batch.commit();
 }
+
+    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,9 +12,11 @@ import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service,
 import { Ticket } from '@/components/ticket';
 import { getCollection, addItem, updateItem, deleteItem, addRepairRequest, getRepairRequests, updateRepairRequest, updateRepairRequestWithDevices } from '@/services/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   
   // State for catalog data
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -57,13 +60,18 @@ export default function Home() {
         setRepairRequests(repairRequestsData);
       } catch (error) {
         console.error("Error fetching data from Firestore:", error);
-        // Optionally show a toast notification to the user
+        toast({
+          title: "Error de Carga",
+          description: "No se pudieron cargar los datos desde la base de datos. Es posible que necesites crear índices en Firestore. Revisa la consola para más detalles.",
+          variant: "destructive",
+          duration: 10000,
+        });
       } finally {
         setLoading(false);
       }
     };
     fetchAllData();
-  }, []);
+  }, [toast]);
 
 
   useEffect(() => {
@@ -267,3 +275,5 @@ export default function Home() {
     </>
   );
 }
+
+    
