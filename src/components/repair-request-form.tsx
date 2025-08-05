@@ -88,7 +88,7 @@ interface RepairRequestFormProps {
   accessories: Accessory[];
   conditions: Condition[];
   services: Service[];
-  onAddRequest: (data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => void;
+  onAddRequest: (data: Omit<RepairRequest, 'id' | 'status'>) => void;
   onUpdateRequest?: (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => void;
   initialData?: RepairRequest | null;
   onFormClose?: () => void;
@@ -369,19 +369,19 @@ export function RepairRequestForm({
                 <Collapsible key={field.id} open={isOpen} onOpenChange={() => handleToggleDevice(index)} className="group">
                 <Card className="border-primary border-2 p-0 overflow-hidden">
                      <CollapsibleTrigger asChild>
-                       <button type="button" className="flex justify-between items-center w-full mt-6 mb-4 px-6">
-                         <div className="flex items-center gap-2 text-lg font-headline text-primary pt-1">
+                       <button type="button" className="flex justify-between items-center w-full p-6">
+                         <div className="flex items-center gap-2 text-lg font-headline text-primary">
                             {isOpen ? <ChevronUp /> : <ChevronDown />}
                             <Smartphone /> Dispositivo #{index + 1}
                          </div>
                          {deviceFields.length > 1 && !isEditing && (
-                           <Button type="button" variant="destructive" size="icon" className="h-7 w-7 mt-1 flex-shrink-0" onClick={(e) => { e.stopPropagation(); removeDevice(index); }}>
+                           <Button type="button" variant="destructive" size="icon" className="h-7 w-7 flex-shrink-0" onClick={(e) => { e.stopPropagation(); removeDevice(index); }}>
                              <Trash2 className="h-4 w-4" />
                            </Button>
                          )}
                        </button>
                      </CollapsibleTrigger>
-                    <CollapsibleContent forceMount={isEditing}>
+                    <CollapsibleContent>
                         <div className="grid md:grid-cols-2 gap-8 p-6 pt-0">
                             <div className="space-y-6">
                                 <Card>

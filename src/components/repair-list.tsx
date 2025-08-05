@@ -168,14 +168,14 @@ export function RepairList({
       content: () => ticketRef.current,
       onAfterPrint: () => setPrintingRequest(null),
   });
-
+  
   const handleSetUpPrint = (request: RepairRequest) => {
     setPrintingRequest(request);
   }
   
   React.useEffect(() => {
-    if (printingRequest && ticketRef.current && handlePrint) {
-      handlePrint();
+    if (printingRequest && ticketRef.current) {
+      handlePrint?.();
     }
   }, [printingRequest, handlePrint]);
 

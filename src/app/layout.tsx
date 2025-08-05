@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'EasyTech',
+  title: 'TechCheck',
   description: 'Gestión de Centro de Reparación de Celulares',
 };
 
