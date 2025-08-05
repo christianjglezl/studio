@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -26,8 +26,6 @@ interface RepairListProps extends CatalogData {
   requests: RepairRequest[];
   setRequests: React.Dispatch<React.SetStateAction<RepairRequest[]>>;
   setModels: React.Dispatch<React.SetStateAction<Model[]>>;
-  justAddedRequest?: RepairRequest | null;
-  onPrintComplete?: () => void;
 }
 
 const statusColors: { [key in RepairStatus]: string } = {
@@ -158,7 +156,6 @@ const RepairRow = ({
 
 export function RepairList({ 
   requests, setRequests, brands, models, setModels, colors, accessories, conditions, services,
-  justAddedRequest, onPrintComplete
 }: RepairListProps) {
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
   const [printingRequest, setPrintingRequest] = useState<RepairRequest | null>(null);
@@ -167,38 +164,18 @@ export function RepairList({
   
   const catalog: CatalogData = { brands, models, colors, accessories, conditions, services };
 
-  const handleAfterPrint = () => {
-    setPrintingRequest(null);
-    if (onPrintComplete) {
-      onPrintComplete();
-    }
-  };
-
   const handlePrint = useReactToPrint({
       content: () => ticketRef.current,
-      onAfterPrint: handleAfterPrint,
-      onPrintError: handleAfterPrint
+      onAfterPrint: () => setPrintingRequest(null),
   });
 
   const handleSetUpPrint = (request: RepairRequest) => {
     setPrintingRequest(request);
   }
   
-  // Effect to automatically print when a new request is added
-  useEffect(() => {
-    if (justAddedRequest) {
-      handleSetUpPrint(justAddedRequest);
-    }
-  }, [justAddedRequest]);
-  
-  // Effect to trigger print once the state is updated and component is rendered
-   useEffect(() => {
-    // This effect runs when printingRequest is set.
-    // The `handlePrint` function is called only if the ticketRef is available.
-    if (printingRequest && ticketRef.current) {
-        if (handlePrint) {
-            handlePrint();
-        }
+  React.useEffect(() => {
+    if (printingRequest && handlePrint) {
+      handlePrint();
     }
   }, [printingRequest, handlePrint]);
 
