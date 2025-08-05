@@ -23,7 +23,7 @@ export default function Home() {
   
   // State for repair requests
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
-
+  
   useEffect(() => {
     setIsClient(true);
   }, []);

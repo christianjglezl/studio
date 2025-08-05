@@ -177,8 +177,7 @@ export function RepairList({
     if (printingRequest && ticketRef.current) {
       handlePrint?.();
     }
-  }, [printingRequest, ticketRef.current]);
-
+  }, [printingRequest, handlePrint]);
 
   const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
     setRequests(prevRequests =>
@@ -202,7 +201,7 @@ export function RepairList({
          {printingRequest && <Ticket ref={ticketRef} request={printingRequest} catalog={catalog} />}
       </div>
       <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
-        <DialogContent forceMount className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Solicitud de Reparación (Folio: {String(editingRequest?.folio).padStart(4, '0')})</DialogTitle>
           </DialogHeader>
