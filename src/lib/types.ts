@@ -45,6 +45,7 @@ export interface RepairRequest {
   problem?: string;
   problemDescription?: string;
   serviceIds: string[];
+  serviceCosts?: { serviceId: string; cost: number }[];
   accessories: string[];
   conditions: string[];
   password?: string;

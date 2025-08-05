@@ -48,6 +48,13 @@ const deviceSchema = z.object({
   problem: z.string().optional(),
   problemDescription: z.string().optional(),
   serviceIds: z.array(z.string()).min(1, { message: 'Debes seleccionar al menos un servicio.' }),
+  serviceCosts: z.array(z.object({
+    serviceId: z.string(),
+    cost: z.preprocess(
+        (val) => (val === "" || val === undefined ? 0 : parseFloat(String(val))),
+        z.number({invalid_type_error: "El costo debe ser un número."}).nonnegative({ message: 'El costo no puede ser negativo.' }).optional().default(0)
+    ),
+  })).optional(),
   accessories: z.array(z.string()).optional(),
   conditions: z.array(z.string()).min(1, { message: 'Debes seleccionar al menos una condición.' }),
   password: z.string().optional(),
@@ -138,7 +145,7 @@ let nextFolio = 1;
 
 const newDeviceDefault = {
     brandId: '', modelId: '', colorId: '', imei: '',
-    problem: '', problemDescription: '', serviceIds: [],
+    problem: '', problemDescription: '', serviceIds: [], serviceCosts: [],
     accessories: [], conditions: [], password: '', pattern: [], notes: '',
     quote: 0, downPayment: 0,
 };
@@ -186,6 +193,7 @@ export function RepairRequestForm({
             problem: initialData.problem,
             problemDescription: initialData.problemDescription,
             serviceIds: initialData.serviceIds,
+            serviceCosts: initialData.serviceCosts,
             accessories: initialData.accessories,
             conditions: initialData.conditions,
             password: initialData.password,
@@ -309,6 +317,22 @@ export function RepairRequestForm({
     setOpenDevices(prev => ({...prev, [index]: !prev[index]}));
   };
 
+  useEffect(() => {
+    const subscription = form.watch((value, { name, type }) => {
+      if (name && name.startsWith('devices') && (name.endsWith('serviceIds') || name.endsWith('serviceCosts'))) {
+        const deviceIndexMatch = name.match(/devices\.(\d+)/);
+        if (deviceIndexMatch) {
+          const index = parseInt(deviceIndexMatch[1], 10);
+          const deviceValues = form.getValues(`devices.${index}`);
+          const totalQuote = deviceValues.serviceCosts?.reduce((acc, current) => acc + (current.cost || 0), 0) || 0;
+          form.setValue(`devices.${index}.quote`, totalQuote);
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+
   return (
     <Dialog open={addingModel.open} onOpenChange={(open) => setAddingModel(prev => ({ ...prev, open }))}>
       <Form {...form}>
@@ -364,6 +388,29 @@ export function RepairRequestForm({
              const selectedServicesText = selectedServiceIds.length > 0
                 ? `${selectedServiceIds.length} servicio(s) seleccionado(s)`
                 : 'Seleccionar servicios';
+            
+             const { fields: serviceCostFields, append: appendServiceCost, remove: removeServiceCost } = useFieldArray({
+                control: form.control,
+                name: `devices.${index}.serviceCosts`
+             });
+
+             const handleServiceSelection = (checked: boolean, serviceId: string) => {
+                const currentServiceIds = form.getValues(`devices.${index}.serviceIds`) || [];
+                const currentServiceCosts = form.getValues(`devices.${index}.serviceCosts`) || [];
+                
+                let newServiceIds: string[];
+                let newServiceCosts: {serviceId: string, cost: number}[];
+
+                if (checked) {
+                    newServiceIds = [...currentServiceIds, serviceId];
+                    newServiceCosts = [...currentServiceCosts, { serviceId, cost: 0 }];
+                } else {
+                    newServiceIds = currentServiceIds.filter(id => id !== serviceId);
+                    newServiceCosts = currentServiceCosts.filter(sc => sc.serviceId !== serviceId);
+                }
+                form.setValue(`devices.${index}.serviceIds`, newServiceIds);
+                form.setValue(`devices.${index}.serviceCosts`, newServiceCosts);
+             };
 
              return (
                 <Collapsible key={field.id} open={isOpen} onOpenChange={() => handleToggleDevice(index)} className="group">
@@ -425,12 +472,7 @@ export function RepairRequestForm({
                                                             <DropdownMenuCheckboxItem
                                                                 key={item.id}
                                                                 checked={field.value?.includes(item.id)}
-                                                                onCheckedChange={(checked) => {
-                                                                    const newValue = checked
-                                                                        ? [...(field.value || []), item.id]
-                                                                        : (field.value || []).filter((value) => value !== item.id);
-                                                                    field.onChange(newValue);
-                                                                }}
+                                                                onCheckedChange={(checked) => handleServiceSelection(!!checked, item.id)}
                                                                 onSelect={(e) => e.preventDefault()} // Evita que el menú se cierre al seleccionar
                                                             >
                                                                 {item.name}
@@ -447,17 +489,53 @@ export function RepairRequestForm({
                                 
                                 <Card>
                                     <CardHeader><CardTitle className="font-headline text-base">Costos de Reparación</CardTitle></CardHeader>
-                                    <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                        <FormField control={form.control} name={`devices.${index}.quote`} render={({ field }) => (
-                                            <FormItem><FormLabel>Cotización</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormField control={form.control} name={`devices.${index}.downPayment`} render={({ field }) => (
-                                            <FormItem><FormLabel>Anticipo</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormItem>
-                                            <FormLabel>Restante</FormLabel>
-                                            <div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input readOnly disabled value={remainingValue.toFixed(2)} className="pl-8 font-bold text-lg" /></div>
-                                        </FormItem>
+                                    <CardContent className="space-y-4">
+                                        {watchedDevices[index].serviceCosts?.map((serviceCost, costIndex) => {
+                                            const service = services.find(s => s.id === serviceCost.serviceId);
+                                            return (
+                                                <FormField
+                                                    key={serviceCost.serviceId}
+                                                    control={form.control}
+                                                    name={`devices.${index}.serviceCosts.${costIndex}.cost`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>{service?.name || 'Servicio Desconocido'}</FormLabel>
+                                                            <FormControl>
+                                                                <div className="relative">
+                                                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                                    <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" />
+                                                                </div>
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            );
+                                        })}
+                                        
+                                        <Separator />
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                            <FormField control={form.control} name={`devices.${index}.quote`} render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Cotización Total</FormLabel>
+                                                  <FormControl>
+                                                    <div className="relative">
+                                                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                      <Input type="number" readOnly disabled {...field} className="pl-8 font-bold" />
+                                                    </div>
+                                                  </FormControl>
+                                                  <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                            <FormField control={form.control} name={`devices.${index}.downPayment`} render={({ field }) => (
+                                                <FormItem><FormLabel>Anticipo</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
+                                            )} />
+                                            <FormItem>
+                                                <FormLabel>Restante</FormLabel>
+                                                <div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input readOnly disabled value={remainingValue.toFixed(2)} className="pl-8 font-bold text-lg" /></div>
+                                            </FormItem>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </div>
