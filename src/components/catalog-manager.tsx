@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Brand, Model, Color, Accessory, Condition, Service } from '@/lib/types';
+import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition } from '@/lib/types';
+import { Textarea } from './ui/textarea';
 
 interface CatalogManagerProps {
   brands: Brand[];
@@ -24,9 +25,17 @@ interface CatalogManagerProps {
   setConditions: React.Dispatch<React.SetStateAction<Condition[]>>;
   services: Service[];
   setServices: React.Dispatch<React.SetStateAction<Service[]>>;
+  terms: TermAndCondition[];
+  setTerms: React.Dispatch<React.SetStateAction<TermAndCondition[]>>;
 }
 
-const AddItemDialog: React.FC<{ onAddItem: (name: string, brandId?: string) => void; itemName: string; brands?: Brand[]; hasBrandSelection?: boolean }> = ({ onAddItem, itemName, brands, hasBrandSelection = false }) => {
+const AddItemDialog: React.FC<{
+  onAddItem: (nameOrText: string, brandId?: string) => void;
+  itemName: string;
+  brands?: Brand[];
+  hasBrandSelection?: boolean;
+  isTextArea?: boolean;
+}> = ({ onAddItem, itemName, brands, hasBrandSelection = false, isTextArea = false }) => {
   const [name, setName] = useState('');
   const [brandId, setBrandId] = useState<string | undefined>(undefined);
   const [open, setOpen] = useState(false);
@@ -68,8 +77,12 @@ const AddItemDialog: React.FC<{ onAddItem: (name: string, brandId?: string) => v
             </div>
           )}
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">Nombre</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
+            <Label htmlFor="name" className="text-right">{isTextArea ? 'Texto' : 'Nombre'}</Label>
+            {isTextArea ? (
+                 <Textarea id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
+            ) : (
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
+            )}
           </div>
         </div>
         <DialogFooter>
@@ -83,23 +96,24 @@ const AddItemDialog: React.FC<{ onAddItem: (name: string, brandId?: string) => v
   );
 };
 
-const CatalogTable = <T extends { id: string; name: string }>({ title, items, onAddItem, onDeleteItem, brands, hasBrandSelection }: {
+const CatalogTable = <T extends { id: string; name?: string; text?: string }>({ title, items, onAddItem, onDeleteItem, brands, hasBrandSelection, isTextArea }: {
   title: string;
   items: T[];
-  onAddItem: (name: string, brandId?: string) => void;
+  onAddItem: (nameOrText: string, brandId?: string) => void;
   onDeleteItem: (id: string) => void;
   brands?: Brand[];
   hasBrandSelection?: boolean;
+  isTextArea?: boolean;
 }) => (
   <div>
     <div className="flex justify-end mb-4">
-      <AddItemDialog onAddItem={onAddItem} itemName={title.slice(0, -1)} brands={brands} hasBrandSelection={hasBrandSelection} />
+      <AddItemDialog onAddItem={onAddItem} itemName={title.slice(0, -1)} brands={brands} hasBrandSelection={hasBrandSelection} isTextArea={isTextArea}/>
     </div>
     <div className="rounded-md border max-h-96 overflow-y-auto">
       <Table>
         <TableHeader className="sticky top-0 bg-secondary">
           <TableRow>
-            <TableHead>Nombre</TableHead>
+            <TableHead>{isTextArea ? 'Texto' : 'Nombre'}</TableHead>
             {hasBrandSelection && <TableHead>Marca</TableHead>}
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
@@ -111,7 +125,7 @@ const CatalogTable = <T extends { id: string; name: string }>({ title, items, on
               const brand = brands?.find(b => b.id === model.brandId);
               return (
               <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.name}</TableCell>
+                <TableCell className="font-medium whitespace-pre-wrap">{item.name || item.text}</TableCell>
                 {hasBrandSelection && <TableCell>{brand?.name || 'N/A'}</TableCell>}
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" onClick={() => onDeleteItem(item.id)}>
@@ -139,29 +153,37 @@ export function CatalogManager({
   accessories, setAccessories,
   conditions, setConditions,
   services, setServices,
+  terms, setTerms
 }: CatalogManagerProps) {
   
-  const addItem = <T extends { id: string; name: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>) => (name: string, brandId?: string) => {
-    const newItem: T = { id: crypto.randomUUID(), name } as T;
+  const addItem = <T extends { id: string; name?: string; text?: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>, isTextArea: boolean = false) => (nameOrText: string, brandId?: string) => {
+    const newItem: T = { id: crypto.randomUUID() } as T;
+    if(isTextArea) {
+        newItem.text = nameOrText;
+    } else {
+        newItem.name = nameOrText;
+    }
+
     if (brandId) {
       (newItem as Model).brandId = brandId;
     }
     setter(prev => [...prev, newItem]);
   };
 
-  const deleteItem = <T extends { id: string; name: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>) => (id: string) => {
+  const deleteItem = <T extends { id: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>) => (id: string) => {
     setter(prev => prev.filter(item => item.id !== id));
   };
 
   return (
     <Tabs defaultValue="brands" className="w-full">
-      <TabsList className="grid w-full grid-cols-3 md:grid-cols-6">
+      <TabsList className="grid w-full grid-cols-3 md:grid-cols-7">
         <TabsTrigger value="brands">Marcas</TabsTrigger>
         <TabsTrigger value="models">Modelos</TabsTrigger>
         <TabsTrigger value="colors">Colores</TabsTrigger>
         <TabsTrigger value="accessories">Accesorios</TabsTrigger>
         <TabsTrigger value="conditions">Condiciones</TabsTrigger>
         <TabsTrigger value="services">Servicios</TabsTrigger>
+        <TabsTrigger value="terms">Términos</TabsTrigger>
       </TabsList>
       <TabsContent value="brands" className="mt-4">
         <CatalogTable title="Marcas" items={brands} onAddItem={addItem(setBrands)} onDeleteItem={deleteItem(setBrands)} />
@@ -180,6 +202,9 @@ export function CatalogManager({
       </TabsContent>
       <TabsContent value="services" className="mt-4">
         <CatalogTable title="Servicios" items={services} onAddItem={addItem(setServices)} onDeleteItem={deleteItem(setServices)} />
+      </TabsContent>
+      <TabsContent value="terms" className="mt-4">
+        <CatalogTable title="Términos" items={terms} onAddItem={addItem(setTerms, true)} onDeleteItem={deleteItem(setTerms)} isTextArea/>
       </TabsContent>
     </Tabs>
   );

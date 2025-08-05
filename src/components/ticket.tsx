@@ -118,10 +118,9 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
       
       <div className="text-xs text-center space-y-1 mt-3">
         <p><strong>Términos y Condiciones:</strong></p>
-        <p>1. No nos hacemos responsables por equipos olvidados después de 30 días.</p>
-        <p>2. La garantía en reparaciones es de 30 días y aplica solo sobre la pieza reparada/reemplazada.</p>
-        <p>3. No hay garantía en equipos mojados, con problemas de software o traídos por terceros.</p>
-        <p>4. Es indispensable presentar este ticket para recoger su equipo.</p>
+        {catalog.terms.map(term => (
+          <p key={term.id}>{term.text}</p>
+        ))}
       </div>
 
       <div className="mt-4 text-center">

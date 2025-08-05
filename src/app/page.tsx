@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { RepairRequestForm } from '@/components/repair-request-form';
 import { CatalogManager } from '@/components/catalog-manager';
 import { RepairList } from '@/components/repair-list';
-import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, CatalogData, DeviceInRequest } from '@/lib/types';
-import { initialBrands, initialModels, initialColors, initialAccessories, initialConditions, initialServices } from '@/lib/data';
+import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, CatalogData, DeviceInRequest, TermAndCondition } from '@/lib/types';
+import { initialBrands, initialModels, initialColors, initialAccessories, initialConditions, initialServices, initialTerms } from '@/lib/data';
 import { Ticket } from '@/components/ticket';
 
 let nextFolio = 1;
@@ -23,16 +23,13 @@ export default function Home() {
   const [accessories, setAccessories] = useState<Accessory[]>(initialAccessories);
   const [conditions, setConditions] = useState<Condition[]>(initialConditions);
   const [services, setServices] = useState<Service[]>(initialServices);
+  const [terms, setTerms] = useState<TermAndCondition[]>(initialTerms);
   
   // State for repair requests
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
   const [requestToPrint, setRequestToPrint] = useState<RepairRequest | null>(null);
 
-  const catalog: CatalogData = { brands, models, colors, accessories, conditions, services };
-
-  const handlePrint = (request: RepairRequest) => {
-    setRequestToPrint(request);
-  };
+  const catalog: CatalogData = { brands, models, colors, accessories, conditions, services, terms };
   
   useEffect(() => {
     if (requestToPrint) {
@@ -47,6 +44,10 @@ export default function Home() {
   useEffect(() => {
     setIsClient(true);
   }, []);
+  
+  const handlePrint = (request: RepairRequest) => {
+    setRequestToPrint(request);
+  };
 
   const addRepairRequest = (newRequestData: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => {
     const devicesWithIds: DeviceInRequest[] = newRequestData.devices.map(d => ({...d, id: crypto.randomUUID()}));
@@ -146,6 +147,7 @@ export default function Home() {
                     accessories={accessories} setAccessories={setAccessories}
                     conditions={conditions} setConditions={setConditions}
                     services={services} setServices={setServices}
+                    terms={terms} setTerms={setTerms}
                   />
                 </CardContent>
               </Card>

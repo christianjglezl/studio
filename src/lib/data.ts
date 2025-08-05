@@ -1,4 +1,4 @@
-import type { Brand, Model, Color, Accessory, Condition, Service } from './types';
+import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition } from './types';
 
 export const initialBrands: Brand[] = [
   { id: '1', name: 'Apple' },
@@ -147,4 +147,11 @@ export const initialServices: Service[] = [
     { id: 'sv11', name: 'Cambio de Cámara (Trasera/Frontal)' },
     { id: 'sv12', name: 'Reparación de Micrófono' },
     { id: 'sv13', name: 'Cambio de Tapa Trasera' },
+];
+
+export const initialTerms: TermAndCondition[] = [
+    { id: 'tm1', text: '1. No nos hacemos responsables por equipos olvidados después de 30 días.' },
+    { id: 'tm2', text: '2. La garantía en reparaciones es de 30 días y aplica solo sobre la pieza reparada/reemplazada.' },
+    { id: 'tm3', text: '3. No hay garantía en equipos mojados, con problemas de software o traídos por terceros.' },
+    { id: 'tm4', text: '4. Es indispensable presentar este ticket para recoger su equipo.' },
 ];

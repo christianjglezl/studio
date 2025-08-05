@@ -29,6 +29,11 @@ export interface Service {
   name: string;
 }
 
+export interface TermAndCondition {
+  id: string;
+  text: string;
+}
+
 export type RepairStatus = 'Ingresado' | 'En Revisión' | 'En Reparación' | 'Reparado' | 'Listo para Entrega' | 'Entregado' | 'Cancelado';
 
 export const repairStatuses: RepairStatus[] = ['Ingresado', 'En Revisión', 'En Reparación', 'Reparado', 'Listo para Entrega', 'Entregado', 'Cancelado'];
@@ -69,4 +74,5 @@ export interface CatalogData {
   accessories: Accessory[];
   conditions: Condition[];
   services: Service[];
+  terms: TermAndCondition[];
 }
