@@ -216,25 +216,23 @@ export function RepairRequestForm({
     return () => clearInterval(timer);
   }, []);
   
-  useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
-      if (name && name.startsWith('devices') && (name.endsWith('serviceIds') || name.includes('serviceCosts'))) {
-        const devices = value.devices;
-        if (devices) {
-            devices.forEach((device, index) => {
-              if (device && device.serviceCosts) {
-                const totalQuote = device.serviceCosts.reduce((acc, current) => acc + (current.cost || 0), 0);
-                const currentQuote = form.getValues(`devices.${index}.quote`);
-                if (totalQuote !== currentQuote) {
-                  form.setValue(`devices.${index}.quote`, totalQuote, { shouldValidate: true });
-                }
-              }
-            });
+    useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name && name.startsWith('devices') && name.endsWith('.cost')) {
+        const deviceIndexMatch = name.match(/devices\.(\d+)\.serviceCosts/);
+        if (deviceIndexMatch) {
+          const deviceIndex = parseInt(deviceIndexMatch[1], 10);
+          const devices = form.getValues('devices');
+          const device = devices[deviceIndex];
+          if (device && device.serviceCosts) {
+            const totalQuote = device.serviceCosts.reduce((acc, current) => acc + (current.cost || 0), 0);
+            form.setValue(`devices.${deviceIndex}.quote`, totalQuote, { shouldValidate: true });
+          }
         }
       }
     });
     return () => subscription.unsubscribe();
-  }, [form.watch]);
+  }, [form]);
 
 
   function onSubmit(data: RepairRequestFormValues) {
@@ -503,7 +501,18 @@ export function RepairRequestForm({
                                                             <FormControl>
                                                                 <div className="relative">
                                                                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                                    <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} className="pl-8" />
+                                                                    <Input 
+                                                                        type="number" 
+                                                                        placeholder="0.00" 
+                                                                        {...field} 
+                                                                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                                                                        onFocus={(e) => {
+                                                                            if (e.target.value === '0') {
+                                                                                field.onChange('');
+                                                                            }
+                                                                        }}
+                                                                        className="pl-8" 
+                                                                    />
                                                                 </div>
                                                             </FormControl>
                                                             <FormMessage />
