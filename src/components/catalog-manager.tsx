@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { PlusCircle, Trash2, Pencil } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -96,10 +96,85 @@ const AddItemDialog: React.FC<{
   );
 };
 
-const CatalogTable = <T extends { id: string; name?: string; text?: string }>({ title, items, onAddItem, onDeleteItem, brands, hasBrandSelection, isTextArea }: {
+const EditItemDialog: React.FC<{
+    item: { id: string; name?: string; text?: string; brandId?: string };
+    onUpdateItem: (id: string, nameOrText: string, brandId?: string) => void;
+    itemName: string;
+    brands?: Brand[];
+    hasBrandSelection?: boolean;
+    isTextArea?: boolean;
+  }> = ({ item, onUpdateItem, itemName, brands, hasBrandSelection = false, isTextArea = false }) => {
+    const [name, setName] = useState(item.name || item.text || '');
+    const [brandId, setBrandId] = useState<string | undefined>(item.brandId);
+    const [open, setOpen] = useState(false);
+  
+    useEffect(() => {
+        if(open) {
+            setName(item.name || item.text || '');
+            setBrandId(item.brandId);
+        }
+    }, [open, item]);
+
+    const handleUpdate = () => {
+      if (name.trim() && (!hasBrandSelection || brandId)) {
+        onUpdateItem(item.id, name.trim(), brandId);
+        setOpen(false);
+      }
+    };
+  
+    return (
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+            <Button variant="ghost" size="icon">
+                <Pencil className="h-4 w-4 text-muted-foreground" />
+                <span className="sr-only">Editar</span>
+            </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar {itemName}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {hasBrandSelection && brands && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="brand-edit" className="text-right">Marca</Label>
+                <Select value={brandId} onValueChange={setBrandId}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Selecciona una marca" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {brands.map(brand => (
+                      <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name-edit" className="text-right">{isTextArea ? 'Texto' : 'Nombre'}</Label>
+              {isTextArea ? (
+                   <Textarea id="name-edit" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
+              ) : (
+                  <Input id="name-edit" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancelar</Button>
+            </DialogClose>
+            <Button onClick={handleUpdate}>Guardar Cambios</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+const CatalogTable = <T extends { id: string; name?: string; text?: string }>({ title, items, onAddItem, onUpdateItem, onDeleteItem, brands, hasBrandSelection, isTextArea }: {
   title: string;
   items: T[];
   onAddItem: (nameOrText: string, brandId?: string) => void;
+  onUpdateItem: (id: string, nameOrText: string, brandId?: string) => void;
   onDeleteItem: (id: string) => void;
   brands?: Brand[];
   hasBrandSelection?: boolean;
@@ -128,6 +203,14 @@ const CatalogTable = <T extends { id: string; name?: string; text?: string }>({ 
                 <TableCell className="font-medium whitespace-pre-wrap">{item.name || item.text}</TableCell>
                 {hasBrandSelection && <TableCell>{brand?.name || 'N/A'}</TableCell>}
                 <TableCell className="text-right">
+                  <EditItemDialog 
+                    item={item as Model} 
+                    onUpdateItem={onUpdateItem} 
+                    itemName={title.slice(0,-1)} 
+                    brands={brands} 
+                    hasBrandSelection={hasBrandSelection}
+                    isTextArea={isTextArea}
+                   />
                   <Button variant="ghost" size="icon" onClick={() => onDeleteItem(item.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                     <span className="sr-only">Eliminar</span>
@@ -169,6 +252,25 @@ export function CatalogManager({
     }
     setter(prev => [...prev, newItem]);
   };
+  
+  const updateItem = <T extends { id: string; name?: string; text?: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>, isTextArea: boolean = false) => (id: string, nameOrText: string, brandId?: string) => {
+    setter(prev => prev.map(item => {
+        if (item.id === id) {
+            const updatedItem = {...item};
+            if(isTextArea) {
+                updatedItem.text = nameOrText;
+            } else {
+                updatedItem.name = nameOrText;
+            }
+
+            if (brandId) {
+                (updatedItem as Model).brandId = brandId;
+            }
+            return updatedItem;
+        }
+        return item;
+    }));
+  };
 
   const deleteItem = <T extends { id: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>) => (id: string) => {
     setter(prev => prev.filter(item => item.id !== id));
@@ -186,25 +288,25 @@ export function CatalogManager({
         <TabsTrigger value="terms">Términos</TabsTrigger>
       </TabsList>
       <TabsContent value="brands" className="mt-4">
-        <CatalogTable title="Marcas" items={brands} onAddItem={addItem(setBrands)} onDeleteItem={deleteItem(setBrands)} />
+        <CatalogTable title="Marcas" items={brands} onAddItem={addItem(setBrands)} onUpdateItem={updateItem(setBrands)} onDeleteItem={deleteItem(setBrands)} />
       </TabsContent>
       <TabsContent value="models" className="mt-4">
-        <CatalogTable title="Modelos" items={models} onAddItem={addItem(setModels)} onDeleteItem={deleteItem(setModels)} brands={brands} hasBrandSelection />
+        <CatalogTable title="Modelos" items={models} onAddItem={addItem(setModels)} onUpdateItem={updateItem(setModels)} onDeleteItem={deleteItem(setModels)} brands={brands} hasBrandSelection />
       </TabsContent>
       <TabsContent value="colors" className="mt-4">
-        <CatalogTable title="Colores" items={colors} onAddItem={addItem(setColors)} onDeleteItem={deleteItem(setColors)} />
+        <CatalogTable title="Colores" items={colors} onAddItem={addItem(setColors)} onUpdateItem={updateItem(setColors)} onDeleteItem={deleteItem(setColors)} />
       </TabsContent>
       <TabsContent value="accessories" className="mt-4">
-        <CatalogTable title="Accesorios" items={accessories} onAddItem={addItem(setAccessories)} onDeleteItem={deleteItem(setAccessories)} />
+        <CatalogTable title="Accesorios" items={accessories} onAddItem={addItem(setAccessories)} onUpdateItem={updateItem(setAccessories)} onDeleteItem={deleteItem(setAccessories)} />
       </TabsContent>
       <TabsContent value="conditions" className="mt-4">
-        <CatalogTable title="Condiciones" items={conditions} onAddItem={addItem(setConditions)} onDeleteItem={deleteItem(setConditions)} />
+        <CatalogTable title="Condiciones" items={conditions} onAddItem={addItem(setConditions)} onUpdateItem={updateItem(setConditions)} onDeleteItem={deleteItem(setConditions)} />
       </TabsContent>
       <TabsContent value="services" className="mt-4">
-        <CatalogTable title="Servicios" items={services} onAddItem={addItem(setServices)} onDeleteItem={deleteItem(setServices)} />
+        <CatalogTable title="Servicios" items={services} onAddItem={addItem(setServices)} onUpdateItem={updateItem(setServices)} onDeleteItem={deleteItem(setServices)} />
       </TabsContent>
       <TabsContent value="terms" className="mt-4">
-        <CatalogTable title="Términos" items={terms} onAddItem={addItem(setTerms, true)} onDeleteItem={deleteItem(setTerms)} isTextArea/>
+        <CatalogTable title="Términos" items={terms} onAddItem={addItem(setTerms, true)} onUpdateItem={updateItem(setTerms, true)} onDeleteItem={deleteItem(setTerms)} isTextArea/>
       </TabsContent>
     </Tabs>
   );
