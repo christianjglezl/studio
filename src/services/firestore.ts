@@ -1,5 +1,5 @@
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, writeBatch, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, writeBatch, serverTimestamp, getDoc, runTransaction } from 'firebase/firestore';
 import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition, RepairRequest, DeviceInRequest } from '@/lib/types';
 
 type CollectionType = Brand | Model | Color | Accessory | Condition | Service | TermAndCondition;
@@ -51,15 +51,18 @@ export const addRepairRequest = async (requestData: Omit<RepairRequest, 'id' | '
 
     // Get the highest folio number to increment it
     const counterRef = doc(db, "counters", "repairRequests");
-    const counterSnap = await getDoc(counterRef);
     
-    let nextFolio = 1;
-    if (counterSnap.exists()) {
+    // Use a transaction to safely increment the folio
+    const newFolio = await runTransaction(db, async (transaction) => {
+      const counterSnap = await transaction.get(counterRef);
+      let nextFolio = 1;
+      if (counterSnap.exists()) {
         nextFolio = counterSnap.data().currentFolio + 1;
-    } else {
-        // If counter doesn't exist, create it
-        batch.set(counterRef, { currentFolio: 1 });
-    }
+      }
+      transaction.set(counterRef, { currentFolio: nextFolio }, { merge: true });
+      return nextFolio;
+    });
+
     
     const newRequestRef = doc(collection(db, "repairRequests"));
     
@@ -67,7 +70,8 @@ export const addRepairRequest = async (requestData: Omit<RepairRequest, 'id' | '
 
     batch.set(newRequestRef, {
         ...request,
-        folio: nextFolio,
+        folio: newFolio,
+        status: 'Ingresado',
         createdAt: serverTimestamp(),
     });
 
@@ -76,10 +80,8 @@ export const addRepairRequest = async (requestData: Omit<RepairRequest, 'id' | '
         batch.set(deviceRef, device);
     });
 
-    batch.update(counterRef, { currentFolio: nextFolio });
-
     await batch.commit();
-    return { id: newRequestRef.id, folio: nextFolio };
+    return { id: newRequestRef.id, folio: newFolio };
 };
 
 export const updateRepairRequest = async (id: string, data: Partial<Omit<RepairRequest, 'devices'>>) => {
@@ -109,3 +111,110 @@ export const updateRepairRequestWithDevices = async (id: string, data: Omit<Repa
     
     await batch.commit();
 }
+
+
+// Function to seed initial data
+export const seedInitialData = async () => {
+    const brandsRef = collection(db, 'brands');
+    const snapshot = await getDocs(query(brandsRef));
+
+    // If brands collection is not empty, assume data is already seeded
+    if (!snapshot.empty) {
+        return;
+    }
+
+    console.log("No initial data found. Seeding database...");
+
+    const batch = writeBatch(db);
+
+    const initialData = {
+        brands: [
+            { id: "apple", name: "Apple" },
+            { id: "samsung", name: "Samsung" },
+            { id: "google", name: "Google" },
+            { id: "xiaomi", name: "Xiaomi" },
+            { id: "motorola", name: "Motorola" },
+            { id: "huawei", name: "Huawei" },
+        ],
+        models: [
+            // Apple
+            { name: "iPhone 15", brandId: "apple" },
+            { name: "iPhone 15 Pro", brandId: "apple" },
+            { name: "iPhone 15 Pro Max", brandId: "apple" },
+            { name: "iPhone 14", brandId: "apple" },
+            { name: "iPhone 14 Pro", brandId: "apple" },
+            { name: "iPhone SE (3rd gen)", brandId: "apple" },
+            // Samsung
+            { name: "Galaxy S24", brandId: "samsung" },
+            { name: "Galaxy S24 Ultra", brandId: "samsung" },
+            { name: "Galaxy Z Fold 5", brandId: "samsung" },
+            { name: "Galaxy Z Flip 5", brandId: "samsung" },
+            { name: "Galaxy A55", brandId: "samsung" },
+            // Google
+            { name: "Pixel 8", brandId: "google" },
+            { name: "Pixel 8 Pro", brandId: "google" },
+            { name: "Pixel 7a", brandId: "google" },
+            { name: "Pixel Fold", brandId: "google" },
+            // Xiaomi
+            { name: "14", brandId: "xiaomi" },
+            { name: "14 Ultra", brandId: "xiaomi" },
+            { name: "Redmi Note 13 Pro", brandId: "xiaomi" },
+            // Motorola
+            { name: "Razr 40", brandId: "motorola" },
+            { name: "Edge 50 Pro", brandId: "motorola" },
+            { name: "Moto G84", brandId: "motorola" },
+            // Huawei
+            { name: "Pura 70", brandId: "huawei" },
+            { name: "Pura 70 Pro", brandId: "huawei" },
+            { name: "Mate X3", brandId: "huawei" },
+        ],
+        colors: [
+            { name: "Negro" }, { name: "Blanco" }, { name: "Plata" }, { name: "Dorado" }, { name: "Azul" }, { name: "Rojo" }, { name: "Verde" }, { name: "Gris Espacial" }
+        ],
+        accessories: [
+            { name: "Cargador" }, { name: "Cable USB" }, { name: "Funda" }, { name: "Mica" }, { name: "SIM" }
+        ],
+        conditions: [
+            { name: "Pantalla Rota" }, { name: "Display Dañado" }, { name: "Tapa Trasera Rota" }, { name: "Mojado" }, { name: "No enciende" }, { name: "Problemas de Carga" }
+        ],
+        services: [
+            { name: "Cambio de Pantalla" }, { name: "Cambio de Batería" }, { name: "Reparación de Centro de Carga" }, { name: "Diagnóstico" }
+        ],
+        terms: [
+            { text: "No nos hacemos responsables por equipos dejados después de 30 días." },
+            { text: "La garantía aplica solo sobre la pieza reparada." },
+            { text: "Equipos mojados no tienen garantía." },
+            { text: "Toda revisión causa un costo de $100 MXN." }
+        ]
+    };
+
+    // Add brands
+    initialData.brands.forEach(brand => {
+        const docRef = doc(db, `brands/${brand.id}`);
+        batch.set(docRef, { name: brand.name });
+    });
+
+    // Add models
+    initialData.models.forEach(model => {
+        const docRef = doc(collection(db, 'models'));
+        batch.set(docRef, model);
+    });
+    
+    // Add other catalogs
+    (Object.keys(initialData) as (keyof typeof initialData)[]).forEach(key => {
+        if (key !== 'brands' && key !== 'models') {
+            const items = initialData[key] as {name?: string, text?:string}[];
+            items.forEach(item => {
+                const docRef = doc(collection(db, key));
+                batch.set(docRef, item);
+            })
+        }
+    });
+
+    try {
+        await batch.commit();
+        console.log("Initial data seeded successfully!");
+    } catch (error) {
+        console.error("Error seeding data: ", error);
+    }
+};
