@@ -38,10 +38,11 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu';
+import { addItem } from '@/services/firestore';
 
 
 const deviceSchema = z.object({
-  id: z.string().optional(), // Not part of the form, but useful for mapping
+  id: z.string().optional(),
   brandId: z.string().min(1, { message: 'Por favor, selecciona una marca.' }),
   modelId: z.string().min(1, { message: 'Por favor, selecciona un modelo.' }),
   colorId: z.string().min(1, { message: 'Por favor, selecciona un color.' }),
@@ -165,7 +166,7 @@ export function RepairRequestForm({
     defaultValues: {
       clientName: '',
       phoneNumbers: [{ value: '' }],
-      devices: [newDeviceDefault],
+      devices: [newDeviceDefault as DeviceInRequest],
     },
   });
 
@@ -184,9 +185,8 @@ export function RepairRequestForm({
       form.reset({
         clientName: initialData.clientName,
         phoneNumbers: initialData.phoneNumbers,
-        devices: initialData.devices,
+        devices: initialData.devices.map(d => ({...d})), // Create a copy
       });
-      // Open all device accordions in edit mode
       const openStates = initialData.devices.reduce((acc, _, index) => {
         acc[index] = true;
         return acc;
@@ -195,8 +195,6 @@ export function RepairRequestForm({
     }
   }, [initialData, isEditing, form]);
 
-
-  
   const watchedDevices = form.watch('devices');
 
   useEffect(() => {
@@ -205,7 +203,7 @@ export function RepairRequestForm({
   }, []);
   
     useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
+    const subscription = form.watch((value, { name, type }) => {
       if (name && name.startsWith('devices') && name.includes('serviceCosts')) {
         const deviceIndexMatch = name.match(/devices\.(\d+)\.serviceCosts/);
         if (deviceIndexMatch) {
@@ -224,8 +222,12 @@ export function RepairRequestForm({
 
 
   function onSubmit(data: RepairRequestFormValues) {
+    // Assign temporary client-side IDs for devices before submission if they don't have one
+    const devicesWithIds = data.devices.map(d => ({ ...d, id: d.id || crypto.randomUUID() }));
+    const finalData = { ...data, devices: devicesWithIds };
+    
     if (isEditing && initialData && onUpdateRequest) {
-      onUpdateRequest(initialData.id, data);
+      onUpdateRequest(initialData.id, finalData);
       toast({
         title: '¡Registro Actualizado!',
         description: `El registro para ${data.clientName} ha sido actualizado.`,
@@ -233,7 +235,7 @@ export function RepairRequestForm({
       });
       onFormClose?.();
     } else {
-      onAddRequest(data);
+      onAddRequest(finalData);
       toast({
         title: `¡${data.devices.length} Dispositivo(s) Registrado(s)!`,
         description: `Los dispositivos para ${data.clientName} se han añadido.`,
@@ -243,7 +245,7 @@ export function RepairRequestForm({
       form.reset({
           clientName: '',
           phoneNumbers: [{ value: '' }],
-          devices: [newDeviceDefault]
+          devices: [newDeviceDefault as DeviceInRequest]
       });
       setOpenDevices({ 0: true });
     }
@@ -259,13 +261,11 @@ export function RepairRequestForm({
     }
   };
   
-  const handleAddNewModel = (name: string, brandId: string) => {
+  const handleAddNewModel = async (name: string, brandId: string) => {
     if (brandId) {
-        const newModel: Model = {
-            id: crypto.randomUUID(),
-            name,
-            brandId: brandId,
-        };
+        const newModelData = { name, brandId };
+        const newId = await addItem('models', newModelData);
+        const newModel: Model = { id: newId, ...newModelData };
         setModels(prev => [...prev, newModel]);
         form.setValue(`devices.${addingModel.index}.modelId`, newModel.id);
         setAddingModel({ open: false, index: -1, brandId: '' });
@@ -299,7 +299,7 @@ export function RepairRequestForm({
         newOpenDevices[deviceFields.length] = true;
         return newOpenDevices;
     });
-    appendDevice(newDeviceDefault);
+    appendDevice(newDeviceDefault as DeviceInRequest);
   };
   
   const handleToggleDevice = (index: number) => {
@@ -441,7 +441,7 @@ export function RepairRequestForm({
                                                                 key={item.id}
                                                                 checked={field.value?.includes(item.id)}
                                                                 onCheckedChange={(checked) => handleServiceSelection(!!checked, item.id)}
-                                                                onSelect={(e) => e.preventDefault()} // Evita que el menú se cierre al seleccionar
+                                                                onSelect={(e) => e.preventDefault()}
                                                             >
                                                                 {item.name}
                                                             </DropdownMenuCheckboxItem>

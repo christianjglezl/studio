@@ -9,24 +9,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition } from '@/lib/types';
+import type { CatalogData, Brand, Model } from '@/lib/types';
 import { Textarea } from './ui/textarea';
 
+type CollectionName = keyof Omit<CatalogData, 'terms'> | 'terms';
+
 interface CatalogManagerProps {
-  brands: Brand[];
-  setBrands: React.Dispatch<React.SetStateAction<Brand[]>>;
-  models: Model[];
-  setModels: React.Dispatch<React.SetStateAction<Model[]>>;
-  colors: Color[];
-  setColors: React.Dispatch<React.SetStateAction<Color[]>>;
-  accessories: Accessory[];
-  setAccessories: React.Dispatch<React.SetStateAction<Accessory[]>>;
-  conditions: Condition[];
-  setConditions: React.Dispatch<React.SetStateAction<Condition[]>>;
-  services: Service[];
-  setServices: React.Dispatch<React.SetStateAction<Service[]>>;
-  terms: TermAndCondition[];
-  setTerms: React.Dispatch<React.SetStateAction<TermAndCondition[]>>;
+    catalog: CatalogData;
+    onAddItem: (collectionName: any, item: any) => Promise<void>;
+    onUpdateItem: (collectionName: any, id: string, item: any) => Promise<void>;
+    onDeleteItem: (collectionName: any, id: string) => Promise<void>;
 }
 
 const AddItemDialog: React.FC<{
@@ -230,50 +222,37 @@ const CatalogTable = <T extends { id: string; name?: string; text?: string }>({ 
 );
 
 export function CatalogManager({
-  brands, setBrands,
-  models, setModels,
-  colors, setColors,
-  accessories, setAccessories,
-  conditions, setConditions,
-  services, setServices,
-  terms, setTerms
+  catalog, onAddItem, onUpdateItem, onDeleteItem
 }: CatalogManagerProps) {
   
-  const addItem = <T extends { id: string; name?: string; text?: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>, isTextArea: boolean = false) => (nameOrText: string, brandId?: string) => {
-    const newItem: T = { id: crypto.randomUUID() } as T;
-    if(isTextArea) {
-        newItem.text = nameOrText;
+  const handleAddItem = (collectionName: CollectionName, isTextArea: boolean = false) => (nameOrText: string, brandId?: string) => {
+    const newItem: any = {};
+    if (isTextArea) {
+      newItem.text = nameOrText;
     } else {
-        newItem.name = nameOrText;
+      newItem.name = nameOrText;
     }
-
     if (brandId) {
-      (newItem as Model).brandId = brandId;
+      newItem.brandId = brandId;
     }
-    setter(prev => [...prev, newItem]);
+    onAddItem(collectionName, newItem);
   };
   
-  const updateItem = <T extends { id: string; name?: string; text?: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>, isTextArea: boolean = false) => (id: string, nameOrText: string, brandId?: string) => {
-    setter(prev => prev.map(item => {
-        if (item.id === id) {
-            const updatedItem = {...item};
-            if(isTextArea) {
-                updatedItem.text = nameOrText;
-            } else {
-                updatedItem.name = nameOrText;
-            }
-
-            if (brandId) {
-                (updatedItem as Model).brandId = brandId;
-            }
-            return updatedItem;
-        }
-        return item;
-    }));
+  const handleUpdateItem = (collectionName: CollectionName, isTextArea: boolean = false) => (id: string, nameOrText: string, brandId?: string) => {
+    const updatedItem: any = {};
+    if (isTextArea) {
+        updatedItem.text = nameOrText;
+    } else {
+        updatedItem.name = nameOrText;
+    }
+    if (brandId) {
+        updatedItem.brandId = brandId;
+    }
+    onUpdateItem(collectionName, id, updatedItem);
   };
 
-  const deleteItem = <T extends { id: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>) => (id: string) => {
-    setter(prev => prev.filter(item => item.id !== id));
+  const handleDeleteItem = (collectionName: CollectionName) => (id: string) => {
+    onDeleteItem(collectionName, id);
   };
 
   return (
@@ -288,25 +267,25 @@ export function CatalogManager({
         <TabsTrigger value="terms">Términos</TabsTrigger>
       </TabsList>
       <TabsContent value="brands" className="mt-4">
-        <CatalogTable title="Marcas" items={brands} onAddItem={addItem(setBrands)} onUpdateItem={updateItem(setBrands)} onDeleteItem={deleteItem(setBrands)} />
+        <CatalogTable title="Marcas" items={catalog.brands} onAddItem={handleAddItem('brands')} onUpdateItem={handleUpdateItem('brands')} onDeleteItem={handleDeleteItem('brands')} />
       </TabsContent>
       <TabsContent value="models" className="mt-4">
-        <CatalogTable title="Modelos" items={models} onAddItem={addItem(setModels)} onUpdateItem={updateItem(setModels)} onDeleteItem={deleteItem(setModels)} brands={brands} hasBrandSelection />
+        <CatalogTable title="Modelos" items={catalog.models} onAddItem={handleAddItem('models')} onUpdateItem={handleUpdateItem('models')} onDeleteItem={handleDeleteItem('models')} brands={catalog.brands} hasBrandSelection />
       </TabsContent>
       <TabsContent value="colors" className="mt-4">
-        <CatalogTable title="Colores" items={colors} onAddItem={addItem(setColors)} onUpdateItem={updateItem(setColors)} onDeleteItem={deleteItem(setColors)} />
+        <CatalogTable title="Colores" items={catalog.colors} onAddItem={handleAddItem('colors')} onUpdateItem={handleUpdateItem('colors')} onDeleteItem={handleDeleteItem('colors')} />
       </TabsContent>
       <TabsContent value="accessories" className="mt-4">
-        <CatalogTable title="Accesorios" items={accessories} onAddItem={addItem(setAccessories)} onUpdateItem={updateItem(setAccessories)} onDeleteItem={deleteItem(setAccessories)} />
+        <CatalogTable title="Accesorios" items={catalog.accessories} onAddItem={handleAddItem('accessories')} onUpdateItem={handleUpdateItem('accessories')} onDeleteItem={handleDeleteItem('accessories')} />
       </TabsContent>
       <TabsContent value="conditions" className="mt-4">
-        <CatalogTable title="Condiciones" items={conditions} onAddItem={addItem(setConditions)} onUpdateItem={updateItem(setConditions)} onDeleteItem={deleteItem(setConditions)} />
+        <CatalogTable title="Condiciones" items={catalog.conditions} onAddItem={handleAddItem('conditions')} onUpdateItem={handleUpdateItem('conditions')} onDeleteItem={handleDeleteItem('conditions')} />
       </TabsContent>
       <TabsContent value="services" className="mt-4">
-        <CatalogTable title="Servicios" items={services} onAddItem={addItem(setServices)} onUpdateItem={updateItem(setServices)} onDeleteItem={deleteItem(setServices)} />
+        <CatalogTable title="Servicios" items={catalog.services} onAddItem={handleAddItem('services')} onUpdateItem={handleUpdateItem('services')} onDeleteItem={handleDeleteItem('services')} />
       </TabsContent>
       <TabsContent value="terms" className="mt-4">
-        <CatalogTable title="Términos" items={terms} onAddItem={addItem(setTerms, true)} onUpdateItem={updateItem(setTerms, true)} onDeleteItem={deleteItem(setTerms)} isTextArea/>
+        <CatalogTable title="Términos" items={catalog.terms} onAddItem={handleAddItem('terms', true)} onUpdateItem={handleUpdateItem('terms', true)} onDeleteItem={handleDeleteItem('terms')} isTextArea/>
       </TabsContent>
     </Tabs>
   );

@@ -19,6 +19,8 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ChevronDown, Pencil, Printer, Smartphone } from 'lucide-react';
 import { RepairRequestForm } from './repair-request-form';
+import { updateRepairRequest } from '@/services/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 interface RepairListProps {
   requests: RepairRequest[];
@@ -26,6 +28,7 @@ interface RepairListProps {
   catalog: CatalogData;
   setModels: React.Dispatch<React.SetStateAction<Model[]>>;
   onPrintRequest: (request: RepairRequest) => void;
+  onUpdateRequest: (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => Promise<void>;
 }
 
 const statusColors: { [key in RepairStatus]: string } = {
@@ -173,24 +176,36 @@ const RepairRow = ({
 
 
 export function RepairList({ 
-  requests, setRequests, catalog, setModels, onPrintRequest
+  requests, setRequests, catalog, setModels, onPrintRequest, onUpdateRequest
 }: RepairListProps) {
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
+  const { toast } = useToast();
   
-  const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
-    setRequests(prevRequests =>
-      prevRequests.map(req =>
-        req.id === requestId ? { ...req, status: newStatus } : req
-      )
-    );
+  const handleStatusChange = async (requestId: string, newStatus: RepairStatus) => {
+    try {
+      await updateRepairRequest(requestId, { status: newStatus });
+      setRequests(prevRequests =>
+        prevRequests.map(req =>
+          req.id === requestId ? { ...req, status: newStatus } : req
+        )
+      );
+      toast({
+        title: "Estatus Actualizado",
+        description: `El estatus del folio #${String(requests.find(r=>r.id===requestId)?.folio).padStart(4, '0')} ha sido cambiado a "${newStatus}".`,
+        variant: "success"
+      });
+    } catch (error) {
+      console.error("Error updating status:", error);
+       toast({
+        title: "Error",
+        description: "No se pudo actualizar el estatus.",
+        variant: "destructive"
+      });
+    }
   };
   
   const handleEdit = (request: RepairRequest) => {
     setEditingRequest(request);
-  }
-
-  const handleUpdate = (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => {
-    setRequests(prev => prev.map(req => req.id === id ? { ...req, ...data } : req));
   }
   
   const allDevices = requests.flatMap(req => 
@@ -219,7 +234,7 @@ export function RepairList({
               conditions={catalog.conditions}
               services={catalog.services}
               onAddRequest={() => {}} // Not used in edit mode
-              onUpdateRequest={handleUpdate}
+              onUpdateRequest={onUpdateRequest}
               initialData={editingRequest}
               onFormClose={() => setEditingRequest(null)}
           />
