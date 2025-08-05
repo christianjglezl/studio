@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -27,6 +27,8 @@ interface RepairListProps extends CatalogData {
   requests: RepairRequest[];
   setRequests: React.Dispatch<React.SetStateAction<RepairRequest[]>>;
   setModels: React.Dispatch<React.SetStateAction<Model[]>>;
+  justAddedRequest?: RepairRequest | null;
+  onPrintComplete?: () => void;
 }
 
 const statusColors: { [key in RepairStatus]: string } = {
@@ -64,15 +66,14 @@ const RepairRow = ({
   const { brands, models, colors, accessories, conditions, services } = catalog;
 
   return (
-    <Collapsible asChild key={request.id} open={isOpen} onOpenChange={setIsOpen}>
-      <>
+    <React.Fragment key={request.id}>
         <TableRow className="align-middle">
           <TableCell>
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
-                <span className="sr-only">{isOpen ? "Cerrar" : "Abrir"} detalles</span>
-              </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(!isOpen)}>
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                  <span className="sr-only">{isOpen ? "Cerrar" : "Abrir"} detalles</span>
+                </Button>
             </CollapsibleTrigger>
           </TableCell>
           <TableCell className="font-medium">{String(request.folio).padStart(4, '0')}</TableCell>
@@ -111,7 +112,7 @@ const RepairRow = ({
              </Button>
           </TableCell>
         </TableRow>
-        <CollapsibleContent asChild>
+        {isOpen && (
             <TableRow className="bg-muted/50">
                 <TableCell colSpan={8} className="p-0">
                   <div className="p-4">
@@ -152,14 +153,16 @@ const RepairRow = ({
                   </div>
                 </TableCell>
             </TableRow>
-        </CollapsibleContent>
-      </>
-    </Collapsible>
+        )}
+    </React.Fragment>
   );
 };
 
 
-export function RepairList({ requests, setRequests, brands, models, setModels, colors, accessories, conditions, services }: RepairListProps) {
+export function RepairList({ 
+  requests, setRequests, brands, models, setModels, colors, accessories, conditions, services,
+  justAddedRequest, onPrintComplete
+}: RepairListProps) {
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
   const [printingRequest, setPrintingRequest] = useState<RepairRequest | null>(null);
   
@@ -169,8 +172,39 @@ export function RepairList({ requests, setRequests, brands, models, setModels, c
 
   const handlePrint = useReactToPrint({
       content: () => ticketRef.current,
-      onAfterPrint: () => setPrintingRequest(null),
+      onAfterPrint: () => {
+        setPrintingRequest(null);
+        if (onPrintComplete) {
+          onPrintComplete();
+        }
+      },
+      onPrintError: () => {
+        setPrintingRequest(null);
+        if (onPrintComplete) {
+            onPrintComplete();
+        }
+      }
   });
+
+  const handleSetUpPrint = (request: RepairRequest) => {
+    setPrintingRequest(request);
+  }
+
+  useEffect(() => {
+    if (justAddedRequest) {
+      handleSetUpPrint(justAddedRequest);
+    }
+  }, [justAddedRequest]);
+
+  useEffect(() => {
+    if (printingRequest) {
+      const timer = setTimeout(() => {
+        handlePrint();
+      }, 50); // Small delay to ensure the component has rendered
+      return () => clearTimeout(timer);
+    }
+  }, [printingRequest, handlePrint]);
+
 
   const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
     setRequests(prevRequests =>
@@ -182,12 +216,6 @@ export function RepairList({ requests, setRequests, brands, models, setModels, c
   
   const handleEdit = (request: RepairRequest) => {
     setEditingRequest(request);
-  }
-  
-  const handleSetUpPrint = (request: RepairRequest) => {
-    setPrintingRequest(request);
-    // useReactToPrint needs a moment for the state to update and the component to render
-    setTimeout(handlePrint, 50);
   }
 
   const handleUpdate = (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => {

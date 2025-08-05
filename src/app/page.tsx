@@ -23,20 +23,21 @@ export default function Home() {
   
   // State for repair requests
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
-  
+  const [justAddedRequest, setJustAddedRequest] = useState<RepairRequest | null>(null);
+
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   const addRepairRequest = (newRequest: Omit<RepairRequest, 'id' | 'status'>) => {
-    setRepairRequests(prev => [
-        { 
-            ...newRequest, 
-            id: crypto.randomUUID(),
-            status: 'Ingresado'
-        }, 
-        ...prev
-    ]);
+    const requestWithId: RepairRequest = { 
+      ...newRequest, 
+      id: crypto.randomUUID(),
+      status: 'Ingresado'
+    };
+    
+    setRepairRequests(prev => [requestWithId, ...prev]);
+    setJustAddedRequest(requestWithId); // Set the just added request to trigger printing
   }
 
   if (!isClient) {
@@ -106,6 +107,8 @@ export default function Home() {
                   accessories={accessories}
                   conditions={conditions}
                   services={services}
+                  justAddedRequest={justAddedRequest}
+                  onPrintComplete={() => setJustAddedRequest(null)}
                 />
               </CardContent>
             </Card>
