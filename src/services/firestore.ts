@@ -188,7 +188,7 @@ export const seedInitialData = async () => {
         ]
     };
 
-    // Add brands
+    // Add brands with specific IDs
     initialData.brands.forEach(brand => {
         const docRef = doc(db, `brands/${brand.id}`);
         batch.set(docRef, { name: brand.name });
@@ -200,10 +200,10 @@ export const seedInitialData = async () => {
         batch.set(docRef, model);
     });
     
-    // Add other catalogs
+    // Add other catalogs with auto-generated IDs
     (Object.keys(initialData) as (keyof typeof initialData)[]).forEach(key => {
         if (key !== 'brands' && key !== 'models') {
-            const items = initialData[key] as {name?: string, text?:string}[];
+            const items = initialData[key] as ({name?: string, text?:string})[];
             items.forEach(item => {
                 const docRef = doc(collection(db, key));
                 batch.set(docRef, item);
