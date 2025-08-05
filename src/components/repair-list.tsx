@@ -177,7 +177,7 @@ export function RepairList({
     if (printingRequest && ticketRef.current) {
       handlePrint?.();
     }
-  }, [printingRequest, handlePrint]);
+  }, [printingRequest, ticketRef.current]);
 
 
   const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
