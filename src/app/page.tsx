@@ -153,7 +153,7 @@ export default function Home() {
         </div>
       </main>
       {requestToPrint && (
-        <div className="hidden print:block">
+        <div className="hidden print:block print-container">
           <Ticket request={requestToPrint} catalog={catalog} />
         </div>
       )}
