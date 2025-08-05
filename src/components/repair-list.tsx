@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -26,6 +26,8 @@ interface RepairListProps extends CatalogData {
   requests: RepairRequest[];
   setRequests: React.Dispatch<React.SetStateAction<RepairRequest[]>>;
   setModels: React.Dispatch<React.SetStateAction<Model[]>>;
+  requestToPrint: RepairRequest | null;
+  clearRequestToPrint: () => void;
 }
 
 const statusColors: { [key in RepairStatus]: string } = {
@@ -63,7 +65,7 @@ const RepairRow = ({
   const { brands, models, colors, accessories, conditions, services } = catalog;
 
   return (
-    <React.Fragment>
+    <>
       <TableRow className="align-middle">
         <TableCell>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(!isOpen)}>
@@ -149,13 +151,14 @@ const RepairRow = ({
               </TableCell>
           </TableRow>
       )}
-    </React.Fragment>
+    </>
   );
 };
 
 
 export function RepairList({ 
   requests, setRequests, brands, models, setModels, colors, accessories, conditions, services,
+  requestToPrint, clearRequestToPrint
 }: RepairListProps) {
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
   
@@ -164,27 +167,33 @@ export function RepairList({
   const handlePrint = (request: RepairRequest) => {
     const ticketHtml = renderToStaticMarkup(<Ticket request={request} catalog={catalog} />);
     
-    const printWindow = window.open('', '_blank', 'height=500,width=500');
+    const printWindow = window.open('', '_blank', 'height=500,width=500,scrollbars=yes');
 
     if (printWindow) {
       printWindow.document.write('<html><head><title>Ticket de Reparación</title>');
-      // Agrega aquí los estilos si es necesario, o enlaza un CSS
       printWindow.document.write('</head><body>');
       printWindow.document.write(ticketHtml);
       printWindow.document.write('</body></html>');
       
       printWindow.document.close();
-      printWindow.focus(); 
       
-      // Espera a que el contenido se cargue antes de imprimir
-      setTimeout(() => {
+      // Wait for content to load before printing
+      printWindow.onload = () => {
+        printWindow.focus(); 
         printWindow.print();
         printWindow.close();
-      }, 250);
+      };
     } else {
       alert('Por favor, habilita las ventanas emergentes para imprimir el ticket.');
     }
   };
+
+  useEffect(() => {
+    if (requestToPrint) {
+      handlePrint(requestToPrint);
+      clearRequestToPrint(); // Clear the request to prevent re-printing on re-renders
+    }
+  }, [requestToPrint, clearRequestToPrint]); // Dependency array ensures this runs only when a new request is ready to be printed
 
   const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
     setRequests(prevRequests =>
