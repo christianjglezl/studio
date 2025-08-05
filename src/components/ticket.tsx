@@ -19,13 +19,13 @@ const getEntityNames = <T extends { id: string; name: string }>(ids: string[] = 
   return ids.map(id => getEntityName(id, entities)).join(', ');
 };
 
-const DeviceTicketSection = ({ device, catalog, index }: { device: DeviceInRequest; catalog: CatalogData; index: number }) => {
+const DeviceTicketSection = ({ device, catalog, index, totalDevices }: { device: DeviceInRequest; catalog: CatalogData; index: number, totalDevices: number }) => {
   const { brands, models, colors, accessories, conditions, services } = catalog;
   const remaining = (device.quote || 0) - (device.downPayment || 0);
 
   return (
-    <>
-      <h2 className="text-center font-bold">Dispositivo #{index + 1}</h2>
+    <div className='py-2'>
+      <h2 className="text-center font-bold">Dispositivo #{index + 1} de {totalDevices}</h2>
       <p><strong>Modelo:</strong> {getEntityName(device.brandId, brands)} {getEntityName(device.modelId, models)}</p>
       <p><strong>Color:</strong> {getEntityName(device.colorId, colors)}</p>
       <p><strong>IMEI:</strong> {device.imei || 'No provisto'}</p>
@@ -41,7 +41,7 @@ const DeviceTicketSection = ({ device, catalog, index }: { device: DeviceInReque
       
       <hr className="my-1 border-dashed border-black" />
 
-      <h3 className="text-center font-bold text-xs">Cotización</h3>
+      <h3 className="text-center font-bold text-xs">Cotización (Dispositivo)</h3>
       <div className="flex justify-between">
         <span>Cotización:</span>
         <span>${device.quote?.toFixed(2) || '0.00'}</span>
@@ -54,10 +54,7 @@ const DeviceTicketSection = ({ device, catalog, index }: { device: DeviceInReque
         <span>Restante:</span>
         <span>${remaining.toFixed(2)}</span>
       </div>
-
-      {/* Add a separator after each device except the last one */}
-      <hr className="my-2 border-solid border-black" />
-    </>
+    </div>
   )
 }
 
@@ -67,11 +64,12 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
   const totalQuote = request.devices.reduce((acc, dev) => acc + (dev.quote || 0), 0);
   const totalDownPayment = request.devices.reduce((acc, dev) => acc + (dev.downPayment || 0), 0);
   const totalRemaining = totalQuote - totalDownPayment;
+  const showTotals = request.devices.length > 1;
 
   return (
     <div className="p-1 font-mono" style={{ width: '58mm', fontSize: '8px', lineHeight: '1.4' }}>
       <div className="text-center">
-        <h1 className="text-lg font-bold">EasyTech</h1>
+        <h1 className="text-lg font-bold">TechCheck</h1>
         <p>Comprobante de Servicio</p>
       </div>
 
@@ -90,22 +88,31 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
       <hr className="my-2 border-solid border-black" />
 
       {request.devices.map((device, index) => (
-        <DeviceTicketSection key={device.id || index} device={device} catalog={catalog} index={index} />
+        <React.Fragment key={device.id || index}>
+          <DeviceTicketSection device={device} catalog={catalog} index={index} totalDevices={request.devices.length}/>
+          {/* Add a separator after each device except the last one */}
+          {index < request.devices.length - 1 && <hr className="my-2 border-solid border-black" />}
+        </React.Fragment>
       ))}
       
-      <h2 className="text-center font-bold">Totales Globales</h2>
-       <div className="flex justify-between text-xs">
-        <span>Cotización Total:</span>
-        <span>${totalQuote.toFixed(2)}</span>
-      </div>
-      <div className="flex justify-between text-xs">
-        <span>Anticipo Total:</span>
-        <span>${totalDownPayment.toFixed(2)}</span>
-      </div>
-      <div className="flex justify-between font-bold text-lg">
-        <span>Restante Total:</span>
-        <span>${totalRemaining.toFixed(2)}</span>
-      </div>
+      {showTotals && (
+        <>
+          <hr className="my-2 border-solid border-black" />
+          <h2 className="text-center font-bold">Totales Globales</h2>
+          <div className="flex justify-between text-xs">
+            <span>Cotización Total:</span>
+            <span>${totalQuote.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span>Anticipo Total:</span>
+            <span>${totalDownPayment.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between font-bold text-lg">
+            <span>Restante Total:</span>
+            <span>${totalRemaining.toFixed(2)}</span>
+          </div>
+        </>
+      )}
 
       <hr className="my-2 border-dashed border-black" />
       

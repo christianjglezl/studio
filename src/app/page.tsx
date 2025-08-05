@@ -36,10 +36,10 @@ export default function Home() {
   
   useEffect(() => {
     if (requestToPrint) {
-      // The call to window.print() will trigger the @media print styles
-      window.print();
-      // Clean up after printing
-      setRequestToPrint(null);
+      setTimeout(() => {
+        window.print();
+        setRequestToPrint(null);
+      }, 100);
     }
   }, [requestToPrint]);
 
@@ -61,7 +61,7 @@ export default function Home() {
     };
     
     setRepairRequests(prev => [requestWithId, ...prev]);
-    setRequestToPrint(requestWithId); // Set the just-added request to be printed
+    handlePrint(requestWithId);
   }
 
   if (!isClient) {
@@ -125,13 +125,8 @@ export default function Home() {
                   <RepairList 
                     requests={repairRequests} 
                     setRequests={setRepairRequests}
-                    brands={brands}
-                    models={models}
+                    catalog={catalog}
                     setModels={setModels}
-                    colors={colors}
-                    accessories={accessories}
-                    conditions={conditions}
-                    services={services}
                     onPrintRequest={handlePrint}
                   />
                 </CardContent>

@@ -20,9 +20,10 @@ import { cn } from '@/lib/utils';
 import { ChevronDown, Pencil, Printer, Smartphone } from 'lucide-react';
 import { RepairRequestForm } from './repair-request-form';
 
-interface RepairListProps extends CatalogData {
+interface RepairListProps {
   requests: RepairRequest[];
   setRequests: React.Dispatch<React.SetStateAction<RepairRequest[]>>;
+  catalog: CatalogData;
   setModels: React.Dispatch<React.SetStateAction<Model[]>>;
   onPrintRequest: (request: RepairRequest) => void;
 }
@@ -92,11 +93,17 @@ const DeviceDetails = ({ device, catalog }: { device: DeviceInRequest; catalog: 
 }
 
 const RepairRow = ({ 
-  request, 
+  request,
+  device,
+  deviceIndex,
+  totalDevices,
   catalog,
   onStatusChange, onEdit, onPrint
 }: {
   request: RepairRequest;
+  device: DeviceInRequest;
+  deviceIndex: number;
+  totalDevices: number;
   catalog: CatalogData;
   onStatusChange: (requestId: string, newStatus: RepairStatus) => void;
   onEdit: (request: RepairRequest) => void;
@@ -105,9 +112,8 @@ const RepairRow = ({
   const [isOpen, setIsOpen] = useState(false);
   const { brands, models } = catalog;
 
-  const mainDevice = request.devices[0];
-  const deviceDescription = `${getEntityName(mainDevice.brandId, brands)} ${getEntityName(mainDevice.modelId, models)}`;
-  const multipleDevices = request.devices.length > 1 ? ` (+${request.devices.length - 1})` : '';
+  const deviceDescription = `${getEntityName(device.brandId, brands)} ${getEntityName(device.modelId, models)}`;
+  const deviceCountIndicator = totalDevices > 1 ? ` (${deviceIndex + 1} de ${totalDevices})` : '';
 
   return (
     <>
@@ -121,7 +127,7 @@ const RepairRow = ({
         <TableCell className="font-medium">{String(request.folio).padStart(4, '0')}</TableCell>
         <TableCell>{request.clientName}</TableCell>
         <TableCell>{request.phoneNumbers[0]?.value || 'N/A'}</TableCell>
-        <TableCell>{deviceDescription}{multipleDevices}</TableCell>
+        <TableCell>{deviceDescription}{deviceCountIndicator}</TableCell>
         <TableCell>{format(new Date(request.createdAt), 'PPp', { locale: es })}</TableCell>
         <TableCell>
           <Select
@@ -148,7 +154,7 @@ const RepairRow = ({
               <Pencil className="h-4 w-4" />
               <span className="sr-only">Editar</span>
            </Button>
-           <Button variant="ghost" size="icon" onClick={() => onPrint(request)}>
+           <Button variant="ghost" size="icon" onClick={() => onPrint({...request, devices: [device] })}>
               <Printer className="h-4 w-4" />
               <span className="sr-only">Imprimir Ticket</span>
            </Button>
@@ -157,9 +163,7 @@ const RepairRow = ({
       {isOpen && (
           <TableRow className="bg-muted/50">
               <TableCell colSpan={8} className="p-4 space-y-4">
-                {request.devices.map(device => (
-                  <DeviceDetails key={device.id} device={device} catalog={catalog} />
-                ))}
+                <DeviceDetails device={device} catalog={catalog} />
               </TableCell>
           </TableRow>
       )}
@@ -169,13 +173,10 @@ const RepairRow = ({
 
 
 export function RepairList({ 
-  requests, setRequests, brands, models, setModels, colors, accessories, conditions, services,
-  onPrintRequest
+  requests, setRequests, catalog, setModels, onPrintRequest
 }: RepairListProps) {
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
   
-  const catalog: CatalogData = { brands, models, colors, accessories, conditions, services };
-
   const handleStatusChange = (requestId: string, newStatus: RepairStatus) => {
     setRequests(prevRequests =>
       prevRequests.map(req =>
@@ -191,6 +192,16 @@ export function RepairList({
   const handleUpdate = (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => {
     setRequests(prev => prev.map(req => req.id === id ? { ...req, ...data } : req));
   }
+  
+  const allDevices = requests.flatMap(req => 
+      req.devices.map((dev, index) => ({
+          request: req,
+          device: dev,
+          deviceIndex: index,
+          totalDevices: req.devices.length,
+      }))
+  );
+
 
   return (
     <div className="rounded-md border">
@@ -200,13 +211,13 @@ export function RepairList({
             <DialogTitle>Editar Solicitud de Reparación (Folio: {String(editingRequest?.folio).padStart(4, '0')})</DialogTitle>
           </DialogHeader>
           <RepairRequestForm
-              brands={brands}
-              models={models}
+              brands={catalog.brands}
+              models={catalog.models}
               setModels={setModels}
-              colors={colors}
-              accessories={accessories}
-              conditions={conditions}
-              services={services}
+              colors={catalog.colors}
+              accessories={catalog.accessories}
+              conditions={catalog.conditions}
+              services={catalog.services}
               onAddRequest={() => {}} // Not used in edit mode
               onUpdateRequest={handleUpdate}
               initialData={editingRequest}
@@ -229,11 +240,14 @@ export function RepairList({
         </TableHeader>
         
         <TableBody>
-            {requests.length > 0 ? (
-              requests.map(request => (
+            {allDevices.length > 0 ? (
+              allDevices.map(({ request, device, deviceIndex, totalDevices }) => (
                 <RepairRow 
-                  key={request.id}
+                  key={device.id}
                   request={request}
+                  device={device}
+                  deviceIndex={deviceIndex}
+                  totalDevices={totalDevices}
                   catalog={catalog}
                   onStatusChange={handleStatusChange}
                   onEdit={handleEdit}
