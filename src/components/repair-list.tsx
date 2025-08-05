@@ -174,7 +174,7 @@ export function RepairList({
   }
   
   React.useEffect(() => {
-    if (printingRequest && handlePrint) {
+    if (printingRequest && ticketRef.current && handlePrint) {
       handlePrint();
     }
   }, [printingRequest, handlePrint]);
