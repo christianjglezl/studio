@@ -119,7 +119,7 @@ export default function Home() {
            <header className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <Smartphone className="w-8 h-8 text-primary" />
-              <h1 className="text-4xl font-bold font-headline text-primary">TechCheck</h1>
+              <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
             </div>
             <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
           </header>
@@ -149,7 +149,7 @@ export default function Home() {
           <header className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <Smartphone className="w-8 h-8 text-primary" />
-              <h1 className="text-4xl font-bold font-headline text-primary">TechCheck</h1>
+              <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
             </div>
             <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
           </header>

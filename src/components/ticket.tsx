@@ -69,7 +69,7 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
   return (
     <div className="p-1 font-mono" style={{ width: '58mm', fontSize: '8px', lineHeight: '1.4' }}>
       <div className="text-center">
-        <h1 className="text-lg font-bold">TechCheck</h1>
+        <h1 className="text-lg font-bold">Easy Tech</h1>
         <p>Comprobante de Servicio</p>
       </div>
 
