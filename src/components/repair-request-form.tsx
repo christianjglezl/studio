@@ -216,22 +216,25 @@ export function RepairRequestForm({
     return () => clearInterval(timer);
   }, []);
   
-  // This useEffect will watch for changes in service costs and update the total quote
   useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name && (name.startsWith('devices') && (name.endsWith('serviceIds') || name.includes('serviceCosts')))) {
-        const devices = form.getValues('devices');
-        devices.forEach((device, index) => {
-          const totalQuote = device.serviceCosts?.reduce((acc, current) => acc + (current.cost || 0), 0) || 0;
-          const currentQuote = form.getValues(`devices.${index}.quote`);
-          if (totalQuote !== currentQuote) {
-             form.setValue(`devices.${index}.quote`, totalQuote);
-          }
-        });
+    const subscription = form.watch((value, { name, type }) => {
+      if (name && name.startsWith('devices') && (name.endsWith('serviceIds') || name.includes('serviceCosts'))) {
+        const devices = value.devices;
+        if (devices) {
+            devices.forEach((device, index) => {
+              if (device && device.serviceCosts) {
+                const totalQuote = device.serviceCosts.reduce((acc, current) => acc + (current.cost || 0), 0);
+                const currentQuote = form.getValues(`devices.${index}.quote`);
+                if (totalQuote !== currentQuote) {
+                  form.setValue(`devices.${index}.quote`, totalQuote, { shouldValidate: true });
+                }
+              }
+            });
+        }
       }
     });
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [form.watch]);
 
 
   function onSubmit(data: RepairRequestFormValues) {
@@ -406,7 +409,7 @@ export function RepairRequestForm({
                     newServiceCosts = currentServiceCosts.filter(sc => sc.serviceId !== serviceId);
                 }
                 form.setValue(`devices.${index}.serviceIds`, newServiceIds);
-                form.setValue(`devices.${index}.serviceCosts`, newServiceCosts);
+                form.setValue(`devices.${index}.serviceCosts`, newServiceCosts, { shouldValidate: true });
              };
 
              return (
@@ -526,7 +529,27 @@ export function RepairRequestForm({
                                                 </FormItem>
                                             )} />
                                             <FormField control={form.control} name={`devices.${index}.downPayment`} render={({ field }) => (
-                                                <FormItem><FormLabel>Anticipo</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
+                                                <FormItem>
+                                                    <FormLabel>Anticipo</FormLabel>
+                                                    <FormControl>
+                                                        <div className="relative">
+                                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                            <Input 
+                                                                type="number" 
+                                                                placeholder="0.00" 
+                                                                {...field} 
+                                                                onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                                                                onFocus={(e) => {
+                                                                    if (e.target.value === '0') {
+                                                                        field.onChange('');
+                                                                    }
+                                                                }}
+                                                                className="pl-8" 
+                                                            />
+                                                        </div>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
                                             )} />
                                             <FormItem>
                                                 <FormLabel>Restante</FormLabel>
@@ -628,5 +651,3 @@ export function RepairRequestForm({
     </Dialog>
   );
 }
-
-    
