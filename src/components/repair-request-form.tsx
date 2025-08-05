@@ -215,6 +215,24 @@ export function RepairRequestForm({
     const timer = setInterval(() => setCurrentDateTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+  
+  // This useEffect will watch for changes in service costs and update the total quote
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name && (name.startsWith('devices') && (name.endsWith('serviceIds') || name.includes('serviceCosts')))) {
+        const devices = form.getValues('devices');
+        devices.forEach((device, index) => {
+          const totalQuote = device.serviceCosts?.reduce((acc, current) => acc + (current.cost || 0), 0) || 0;
+          const currentQuote = form.getValues(`devices.${index}.quote`);
+          if (totalQuote !== currentQuote) {
+             form.setValue(`devices.${index}.quote`, totalQuote);
+          }
+        });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
 
   function onSubmit(data: RepairRequestFormValues) {
     if (isEditing && initialData && onUpdateRequest) {
@@ -317,22 +335,6 @@ export function RepairRequestForm({
     setOpenDevices(prev => ({...prev, [index]: !prev[index]}));
   };
 
-  useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
-      if (name && name.startsWith('devices') && (name.endsWith('serviceIds') || name.endsWith('serviceCosts'))) {
-        const deviceIndexMatch = name.match(/devices\.(\d+)/);
-        if (deviceIndexMatch) {
-          const index = parseInt(deviceIndexMatch[1], 10);
-          const deviceValues = form.getValues(`devices.${index}`);
-          const totalQuote = deviceValues.serviceCosts?.reduce((acc, current) => acc + (current.cost || 0), 0) || 0;
-          form.setValue(`devices.${index}.quote`, totalQuote);
-        }
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
-
-
   return (
     <Dialog open={addingModel.open} onOpenChange={(open) => setAddingModel(prev => ({ ...prev, open }))}>
       <Form {...form}>
@@ -389,11 +391,6 @@ export function RepairRequestForm({
                 ? `${selectedServiceIds.length} servicio(s) seleccionado(s)`
                 : 'Seleccionar servicios';
             
-             const { fields: serviceCostFields, append: appendServiceCost, remove: removeServiceCost } = useFieldArray({
-                control: form.control,
-                name: `devices.${index}.serviceCosts`
-             });
-
              const handleServiceSelection = (checked: boolean, serviceId: string) => {
                 const currentServiceIds = form.getValues(`devices.${index}.serviceIds`) || [];
                 const currentServiceCosts = form.getValues(`devices.${index}.serviceCosts`) || [];
@@ -503,7 +500,7 @@ export function RepairRequestForm({
                                                             <FormControl>
                                                                 <div className="relative">
                                                                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                                    <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" />
+                                                                    <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} className="pl-8" />
                                                                 </div>
                                                             </FormControl>
                                                             <FormMessage />
@@ -529,7 +526,7 @@ export function RepairRequestForm({
                                                 </FormItem>
                                             )} />
                                             <FormField control={form.control} name={`devices.${index}.downPayment`} render={({ field }) => (
-                                                <FormItem><FormLabel>Anticipo</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormLabel>Anticipo</FormLabel><FormControl><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} className="pl-8" /></div></FormControl><FormMessage /></FormItem>
                                             )} />
                                             <FormItem>
                                                 <FormLabel>Restante</FormLabel>
@@ -631,3 +628,5 @@ export function RepairRequestForm({
     </Dialog>
   );
 }
+
+    
