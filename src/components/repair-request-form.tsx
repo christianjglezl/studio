@@ -31,7 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { PatternLock } from '@/components/pattern-lock';
-import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service } from '@/lib/types';
+import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, DeviceInRequest } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -41,6 +41,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuChe
 
 
 const deviceSchema = z.object({
+  id: z.string().optional(), // Not part of the form, but useful for mapping
   brandId: z.string().min(1, { message: 'Por favor, selecciona una marca.' }),
   modelId: z.string().min(1, { message: 'Por favor, selecciona un modelo.' }),
   colorId: z.string().min(1, { message: 'Por favor, selecciona un color.' }),
@@ -95,8 +96,8 @@ interface RepairRequestFormProps {
   accessories: Accessory[];
   conditions: Condition[];
   services: Service[];
-  onAddRequest: (data: Omit<RepairRequest, 'id' | 'status'>) => void;
-  onUpdateRequest?: (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => void;
+  onAddRequest: (data: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => void;
+  onUpdateRequest?: (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => void;
   initialData?: RepairRequest | null;
   onFormClose?: () => void;
 }
@@ -141,9 +142,7 @@ const AddNewModelDialog: React.FC<{ onAddModel: (name: string, brandId: string) 
   );
 };
 
-let nextFolio = 1;
-
-const newDeviceDefault = {
+const newDeviceDefault: Omit<DeviceInRequest, 'id'> = {
     brandId: '', modelId: '', colorId: '', imei: '',
     problem: '', problemDescription: '', serviceIds: [], serviceCosts: [],
     accessories: [], conditions: [], password: '', pattern: [], notes: '',
@@ -185,25 +184,14 @@ export function RepairRequestForm({
       form.reset({
         clientName: initialData.clientName,
         phoneNumbers: initialData.phoneNumbers,
-        devices: [{
-            brandId: initialData.brandId,
-            modelId: initialData.modelId,
-            colorId: initialData.colorId,
-            imei: initialData.imei,
-            problem: initialData.problem,
-            problemDescription: initialData.problemDescription,
-            serviceIds: initialData.serviceIds,
-            serviceCosts: initialData.serviceCosts,
-            accessories: initialData.accessories,
-            conditions: initialData.conditions,
-            password: initialData.password,
-            pattern: initialData.pattern,
-            notes: initialData.notes,
-            quote: initialData.quote,
-            downPayment: initialData.downPayment,
-        }]
+        devices: initialData.devices,
       });
-      setOpenDevices({0: true});
+      // Open all device accordions in edit mode
+      const openStates = initialData.devices.reduce((acc, _, index) => {
+        acc[index] = true;
+        return acc;
+      }, {} as {[key: number]: boolean});
+      setOpenDevices(openStates);
     }
   }, [initialData, isEditing, form]);
 
@@ -237,15 +225,7 @@ export function RepairRequestForm({
 
   function onSubmit(data: RepairRequestFormValues) {
     if (isEditing && initialData && onUpdateRequest) {
-      // Assuming one device per request in edit mode
-      const submissionData = {
-        clientName: data.clientName,
-        phoneNumbers: data.phoneNumbers,
-        ...data.devices[0],
-        folio: initialData.folio,
-        createdAt: initialData.createdAt,
-      };
-      onUpdateRequest(initialData.id, submissionData);
+      onUpdateRequest(initialData.id, data);
       toast({
         title: '¡Registro Actualizado!',
         description: `El registro para ${data.clientName} ha sido actualizado.`,
@@ -253,17 +233,7 @@ export function RepairRequestForm({
       });
       onFormClose?.();
     } else {
-      data.devices.forEach(deviceData => {
-          const submissionData = {
-            clientName: data.clientName,
-            phoneNumbers: data.phoneNumbers,
-            ...deviceData,
-            folio: nextFolio++,
-            createdAt: new Date().toISOString(),
-          };
-          onAddRequest(submissionData);
-      });
-      
+      onAddRequest(data);
       toast({
         title: `¡${data.devices.length} Dispositivo(s) Registrado(s)!`,
         description: `Los dispositivos para ${data.clientName} se han añadido.`,
@@ -415,10 +385,10 @@ export function RepairRequestForm({
                 <Card className="border-primary border-2 p-0 overflow-hidden">
                      <div className="flex justify-between items-center w-full p-6">
                         <CollapsibleTrigger asChild>
-                            <button type="button" className="flex items-center gap-2 text-lg font-headline text-primary">
+                            <div role="button" className="flex items-center gap-2 text-lg font-headline text-primary cursor-pointer">
                                 {isOpen ? <ChevronUp /> : <ChevronDown />}
                                 <Smartphone /> Dispositivo #{index + 1}
-                            </button>
+                            </div>
                         </CollapsibleTrigger>
                          {deviceFields.length > 1 && !isEditing && (
                            <Button type="button" variant="destructive" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => removeDevice(index)}>
@@ -508,6 +478,7 @@ export function RepairRequestForm({
                                                                         onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
                                                                         onFocus={(e) => {
                                                                             if (e.target.value === '0') {
+                                                                                e.target.value = '';
                                                                                 field.onChange('');
                                                                             }
                                                                         }}
@@ -550,6 +521,7 @@ export function RepairRequestForm({
                                                                 onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
                                                                 onFocus={(e) => {
                                                                     if (e.target.value === '0') {
+                                                                        e.target.value = '';
                                                                         field.onChange('');
                                                                     }
                                                                 }}

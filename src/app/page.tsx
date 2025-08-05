@@ -1,16 +1,17 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { HardDrive, Wrench, Smartphone, List } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RepairRequestForm } from '@/components/repair-request-form';
 import { CatalogManager } from '@/components/catalog-manager';
 import { RepairList } from '@/components/repair-list';
-import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, CatalogData } from '@/lib/types';
+import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, CatalogData, DeviceInRequest } from '@/lib/types';
 import { initialBrands, initialModels, initialColors, initialAccessories, initialConditions, initialServices } from '@/lib/data';
 import { Ticket } from '@/components/ticket';
+
+let nextFolio = 1;
 
 export default function Home() {
   const [isClient, setIsClient] = useState(false);
@@ -47,10 +48,15 @@ export default function Home() {
     setIsClient(true);
   }, []);
 
-  const addRepairRequest = (newRequest: Omit<RepairRequest, 'id' | 'status'>) => {
+  const addRepairRequest = (newRequestData: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => {
+    const devicesWithIds: DeviceInRequest[] = newRequestData.devices.map(d => ({...d, id: crypto.randomUUID()}));
+    
     const requestWithId: RepairRequest = { 
-      ...newRequest, 
+      ...newRequestData, 
+      devices: devicesWithIds,
       id: crypto.randomUUID(),
+      folio: nextFolio++,
+      createdAt: new Date().toISOString(),
       status: 'Ingresado'
     };
     
@@ -152,11 +158,9 @@ export default function Home() {
           </Tabs>
         </div>
       </main>
-      {requestToPrint && (
-        <div className="hidden print:block print-container">
-          <Ticket request={requestToPrint} catalog={catalog} />
-        </div>
-      )}
+      <div className="print-container">
+        {requestToPrint && <Ticket request={requestToPrint} catalog={catalog} />}
+      </div>
     </>
   );
 }

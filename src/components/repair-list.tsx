@@ -12,12 +12,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { RepairRequest, RepairStatus, Model, CatalogData } from '@/lib/types';
+import type { RepairRequest, RepairStatus, Model, CatalogData, DeviceInRequest } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { ChevronDown, Pencil, Printer } from 'lucide-react';
+import { ChevronDown, Pencil, Printer, Smartphone } from 'lucide-react';
 import { RepairRequestForm } from './repair-request-form';
 
 interface RepairListProps extends CatalogData {
@@ -46,6 +46,51 @@ const getEntityNames = <T extends { id: string; name: string }>(ids: string[] = 
     return ids.map(id => getEntityName(id, entities)).join(', ');
 };
 
+const DeviceDetails = ({ device, catalog }: { device: DeviceInRequest; catalog: CatalogData }) => {
+  const { models, colors, accessories, conditions, services } = catalog;
+  const remaining = (device.quote || 0) - (device.downPayment || 0);
+  
+  return (
+    <div className="p-4 grid md:grid-cols-4 gap-4 bg-background rounded-lg border">
+      <div className="md:col-span-4 flex items-center gap-2 font-bold text-primary">
+          <Smartphone size={16}/> Dispositivo
+      </div>
+      <Card>
+        <CardHeader><CardTitle className="text-base font-headline">Falla y Servicios</CardTitle></CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <p><strong>Problema:</strong> {device.problem || 'No especificado'}</p>
+          <p><strong>Descripción:</strong> {device.problemDescription || 'Ninguna'}</p>
+          <p><strong>Servicios:</strong> {getEntityNames(device.serviceIds, services)}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle className="text-base font-headline">Condición y Accesorios</CardTitle></CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <p><strong>Condiciones:</strong> {getEntityNames(device.conditions, conditions)}</p>
+          <p><strong>Accesorios:</strong> {getEntityNames(device.accessories, accessories)}</p>
+          <p><strong>Notas:</strong> {device.notes || 'Ninguna'}</p>
+        </CardContent>
+      </Card>
+       <Card>
+        <CardHeader><CardTitle className="text-base font-headline">Seguridad</CardTitle></CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <p><strong>IMEI:</strong> {device.imei || 'No provisto'}</p>
+          <p><strong>Contraseña/PIN:</strong> {device.password || 'No provisto'}</p>
+          <p><strong>Patrón:</strong> {device.pattern && device.pattern.length > 0 ? device.pattern.join(' - ') : 'No provisto'}</p>
+        </CardContent>
+      </Card>
+       <Card>
+        <CardHeader><CardTitle className="text-base font-headline">Cotización</CardTitle></CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <p><strong>Cotización:</strong> ${device.quote?.toFixed(2) || '0.00'}</p>
+          <p><strong>Anticipo:</strong> ${device.downPayment?.toFixed(2) || '0.00'}</p>
+          <p><strong>Restante:</strong> <span className="font-bold">${remaining.toFixed(2)}</span></p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 const RepairRow = ({ 
   request, 
   catalog,
@@ -58,8 +103,11 @@ const RepairRow = ({
   onPrint: (request: RepairRequest) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const remaining = (request.quote || 0) - (request.downPayment || 0);
-  const { brands, models, colors, accessories, conditions, services } = catalog;
+  const { brands, models } = catalog;
+
+  const mainDevice = request.devices[0];
+  const deviceDescription = `${getEntityName(mainDevice.brandId, brands)} ${getEntityName(mainDevice.modelId, models)}`;
+  const multipleDevices = request.devices.length > 1 ? ` (+${request.devices.length - 1})` : '';
 
   return (
     <>
@@ -73,7 +121,7 @@ const RepairRow = ({
         <TableCell className="font-medium">{String(request.folio).padStart(4, '0')}</TableCell>
         <TableCell>{request.clientName}</TableCell>
         <TableCell>{request.phoneNumbers[0]?.value || 'N/A'}</TableCell>
-        <TableCell>{getEntityName(request.brandId, brands)} {getEntityName(request.modelId, models)} ({getEntityName(request.colorId, colors)})</TableCell>
+        <TableCell>{deviceDescription}{multipleDevices}</TableCell>
         <TableCell>{format(new Date(request.createdAt), 'PPp', { locale: es })}</TableCell>
         <TableCell>
           <Select
@@ -108,43 +156,10 @@ const RepairRow = ({
       </TableRow>
       {isOpen && (
           <TableRow className="bg-muted/50">
-              <TableCell colSpan={8} className="p-0">
-                <div className="p-4">
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <Card>
-                      <CardHeader><CardTitle className="text-base font-headline">Falla y Servicios</CardTitle></CardHeader>
-                      <CardContent className="text-sm space-y-2">
-                        <p><strong>Problema:</strong> {request.problem || 'No especificado'}</p>
-                        <p><strong>Descripción:</strong> {request.problemDescription || 'Ninguna'}</p>
-                        <p><strong>Servicios:</strong> {getEntityNames(request.serviceIds, services)}</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader><CardTitle className="text-base font-headline">Condición y Accesorios</CardTitle></CardHeader>
-                      <CardContent className="text-sm space-y-2">
-                        <p><strong>Condiciones:</strong> {getEntityNames(request.conditions, conditions)}</p>
-                        <p><strong>Accesorios:</strong> {getEntityNames(request.accessories, accessories)}</p>
-                        <p><strong>Notas:</strong> {request.notes || 'Ninguna'}</p>
-                      </CardContent>
-                    </Card>
-                     <Card>
-                      <CardHeader><CardTitle className="text-base font-headline">Seguridad</CardTitle></CardHeader>
-                      <CardContent className="text-sm space-y-2">
-                        <p><strong>IMEI:</strong> {request.imei || 'No provisto'}</p>
-                        <p><strong>Contraseña/PIN:</strong> {request.password || 'No provisto'}</p>
-                        <p><strong>Patrón:</strong> {request.pattern && request.pattern.length > 0 ? request.pattern.join(' - ') : 'No provisto'}</p>
-                      </CardContent>
-                    </Card>
-                     <Card>
-                      <CardHeader><CardTitle className="text-base font-headline">Cotización</CardTitle></CardHeader>
-                      <CardContent className="text-sm space-y-2">
-                        <p><strong>Cotización:</strong> ${request.quote?.toFixed(2) || '0.00'}</p>
-                        <p><strong>Anticipo:</strong> ${request.downPayment?.toFixed(2) || '0.00'}</p>
-                        <p><strong>Restante:</strong> <span className="font-bold">${remaining.toFixed(2)}</span></p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
+              <TableCell colSpan={8} className="p-4 space-y-4">
+                {request.devices.map(device => (
+                  <DeviceDetails key={device.id} device={device} catalog={catalog} />
+                ))}
               </TableCell>
           </TableRow>
       )}
@@ -173,7 +188,7 @@ export function RepairList({
     setEditingRequest(request);
   }
 
-  const handleUpdate = (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio'>) => {
+  const handleUpdate = (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => {
     setRequests(prev => prev.map(req => req.id === id ? { ...req, ...data } : req));
   }
 
@@ -206,7 +221,7 @@ export function RepairList({
             <TableHead>Folio</TableHead>
             <TableHead>Cliente</TableHead>
             <TableHead>Teléfono</TableHead>
-            <TableHead>Dispositivo</TableHead>
+            <TableHead>Dispositivo(s)</TableHead>
             <TableHead>Fecha de Ingreso</TableHead>
             <TableHead>Estatus</TableHead>
             <TableHead className="text-right">Acciones</TableHead>

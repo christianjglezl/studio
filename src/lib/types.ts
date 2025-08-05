@@ -33,11 +33,8 @@ export type RepairStatus = 'Ingresado' | 'En Revisión' | 'En Reparación' | 'Re
 
 export const repairStatuses: RepairStatus[] = ['Ingresado', 'En Revisión', 'En Reparación', 'Reparado', 'Listo para Entrega', 'Entregado', 'Cancelado'];
 
-export interface RepairRequest {
+export interface DeviceInRequest {
   id: string;
-  folio: number;
-  clientName: string;
-  phoneNumbers: { value: string }[];
   brandId: string;
   modelId: string;
   colorId: string;
@@ -51,9 +48,17 @@ export interface RepairRequest {
   password?: string;
   pattern?: number[];
   notes?: string;
-  createdAt: string;
   quote?: number;
   downPayment?: number;
+}
+
+export interface RepairRequest {
+  id: string;
+  folio: number;
+  clientName: string;
+  phoneNumbers: { value: string }[];
+  devices: DeviceInRequest[];
+  createdAt: string;
   status: RepairStatus;
 }
 
