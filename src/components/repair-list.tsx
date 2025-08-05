@@ -56,14 +56,14 @@ const RepairRow = ({
   catalog: CatalogData;
   onStatusChange: (requestId: string, newStatus: RepairStatus) => void;
   onEdit: (request: RepairRequest) => void;
-  onPrint: (request: RepairRequest) => void;
+  onPrint: () => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const remaining = (request.quote || 0) - (request.downPayment || 0);
   const { brands, models, colors, accessories, conditions, services } = catalog;
 
   return (
-    <React.Fragment key={request.id}>
+    <React.Fragment>
       <TableRow className="align-middle">
         <TableCell>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(!isOpen)}>
@@ -101,7 +101,7 @@ const RepairRow = ({
               <Pencil className="h-4 w-4" />
               <span className="sr-only">Editar</span>
            </Button>
-           <Button variant="ghost" size="icon" onClick={() => onPrint(request)}>
+           <Button variant="ghost" size="icon" onClick={onPrint}>
               <Printer className="h-4 w-4" />
               <span className="sr-only">Imprimir Ticket</span>
            </Button>
@@ -243,7 +243,7 @@ export function RepairList({
                   catalog={catalog}
                   onStatusChange={handleStatusChange}
                   onEdit={handleEdit}
-                  onPrint={handleSetUpPrint}
+                  onPrint={() => handleSetUpPrint(request)}
                 />
               ))
             ) : (
