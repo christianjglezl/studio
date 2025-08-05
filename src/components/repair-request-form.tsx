@@ -218,7 +218,7 @@ export function RepairRequestForm({
   
     useEffect(() => {
     const subscription = form.watch((value, { name }) => {
-      if (name && name.startsWith('devices') && name.endsWith('.cost')) {
+      if (name && name.startsWith('devices') && name.includes('serviceCosts')) {
         const deviceIndexMatch = name.match(/devices\.(\d+)\.serviceCosts/);
         if (deviceIndexMatch) {
           const deviceIndex = parseInt(deviceIndexMatch[1], 10);
@@ -413,19 +413,19 @@ export function RepairRequestForm({
              return (
                 <Collapsible key={field.id} open={isOpen} onOpenChange={() => handleToggleDevice(index)} className="group">
                 <Card className="border-primary border-2 p-0 overflow-hidden">
-                     <CollapsibleTrigger asChild>
-                       <button type="button" className="flex justify-between items-center w-full p-6">
-                         <div className="flex items-center gap-2 text-lg font-headline text-primary">
-                            {isOpen ? <ChevronUp /> : <ChevronDown />}
-                            <Smartphone /> Dispositivo #{index + 1}
-                         </div>
+                     <div className="flex justify-between items-center w-full p-6">
+                        <CollapsibleTrigger asChild>
+                            <button type="button" className="flex items-center gap-2 text-lg font-headline text-primary">
+                                {isOpen ? <ChevronUp /> : <ChevronDown />}
+                                <Smartphone /> Dispositivo #{index + 1}
+                            </button>
+                        </CollapsibleTrigger>
                          {deviceFields.length > 1 && !isEditing && (
-                           <Button type="button" variant="destructive" size="icon" className="h-7 w-7 flex-shrink-0" onClick={(e) => { e.stopPropagation(); removeDevice(index); }}>
+                           <Button type="button" variant="destructive" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => removeDevice(index)}>
                              <Trash2 className="h-4 w-4" />
                            </Button>
                          )}
-                       </button>
-                     </CollapsibleTrigger>
+                     </div>
                     <CollapsibleContent>
                         <div className="grid md:grid-cols-2 gap-8 p-6 pt-0">
                             <div className="space-y-6">
