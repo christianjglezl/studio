@@ -12,6 +12,7 @@ type CollectionName = 'brands' | 'models' | 'colors' | 'accessories' | 'conditio
 export const getCollection = async <T extends { name?: string, text?: string }>(collectionName: CollectionName): Promise<T[]> => {
     // The orderBy clause was causing issues when Firestore indexes were not set up.
     // A simple query is more robust for this starter template.
+    // We sort the data manually after fetching it.
     const q = query(collection(db, collectionName));
     const querySnapshot = await getDocs(q);
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
