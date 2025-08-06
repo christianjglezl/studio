@@ -248,13 +248,13 @@ export default function Home() {
                       try {
                         await updateItem(collectionName, id, item);
                         switch(collectionName) {
-                          case 'brands': setBrands(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
-                          case 'models': setModels(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
-                          case 'colors': setColors(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
-                          case 'accessories': setAccessories(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
-                          case 'conditions': setConditions(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
-                          case 'services': setServices(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
-                          case 'terms': setTerms(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
+                          case 'brands': setBrands(prev => prev.map(i => i.id === id ? {...i, ...item} as Brand : i)); break;
+                          case 'models': setModels(prev => prev.map(i => i.id === id ? {...i, ...item} as Model : i)); break;
+                          case 'colors': setColors(prev => prev.map(i => i.id === id ? {...i, ...item} as Color : i)); break;
+                          case 'accessories': setAccessories(prev => prev.map(i => i.id === id ? {...i, ...item} as Accessory : i)); break;
+                          case 'conditions': setConditions(prev => prev.map(i => i.id === id ? {...i, ...item} as Condition : i)); break;
+                          case 'services': setServices(prev => prev.map(i => i.id === id ? {...i, ...item} as Service : i)); break;
+                          case 'terms': setTerms(prev => prev.map(i => i.id === id ? {...i, ...item} as TermAndCondition : i)); break;
                         }
                         toast({ title: "Actualizado", description: "El elemento del catálogo se ha actualizado.", variant: "success" });
                       } catch (error) {

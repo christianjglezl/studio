@@ -13,19 +13,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { CatalogData, Brand, Model, TermAndCondition, Color, Accessory, Condition, Service } from '@/lib/types';
 import { Textarea } from './ui/textarea';
 
-type CollectionName = keyof CatalogData;
+type CollectionName = keyof Omit<CatalogData, 'terms'>;
+type TermCollectionName = 'terms';
+
 
 interface CatalogManagerProps {
     catalog: CatalogData;
-    onAddItem: (collectionName: CollectionName, item: any) => Promise<void>;
-    onUpdateItem: (collectionName: CollectionName, id: string, item: any) => Promise<void>;
-    onDeleteItem: (collectionName: CollectionName, id: string) => Promise<void>;
+    onAddItem: (collectionName: keyof CatalogData, item: any) => Promise<void>;
+    onUpdateItem: (collectionName: keyof CatalogData, id: string, item: any) => Promise<void>;
+    onDeleteItem: (collectionName: keyof CatalogData, id: string) => Promise<void>;
 }
 
 // Simplified form for adding/editing items with a single 'name' field
 const NameBasedFormDialog: React.FC<{
   itemToEdit?: { id: string; name: string };
-  onSave: (data: { id?: string; name: string }) => void;
+  onSave: (data: { name: string }) => void;
   dialogTitle: string;
   itemName: string;
 }> = ({ itemToEdit, onSave, dialogTitle, itemName }) => {
@@ -35,14 +37,12 @@ const NameBasedFormDialog: React.FC<{
   useEffect(() => {
     if (open) {
       setName(itemToEdit?.name || '');
-    } else {
-      setName('');
     }
   }, [open, itemToEdit]);
 
   const handleSave = () => {
     if (name.trim()) {
-      onSave({ id: itemToEdit?.id, name: name.trim() });
+      onSave({ name: name.trim() });
       setOpen(false);
     }
   };
@@ -83,7 +83,7 @@ const NameBasedFormDialog: React.FC<{
 // Form for adding/editing Models, which require brand selection
 const ModelFormDialog: React.FC<{
   itemToEdit?: Model;
-  onSave: (data: { id?: string; name: string; brandId: string }) => void;
+  onSave: (data: { name: string; brandId: string }) => void;
   dialogTitle: string;
   brands: Brand[];
 }> = ({ itemToEdit, onSave, dialogTitle, brands }) => {
@@ -95,15 +95,12 @@ const ModelFormDialog: React.FC<{
     if (open) {
       setName(itemToEdit?.name || '');
       setBrandId(itemToEdit?.brandId);
-    } else {
-        setName('');
-        setBrandId(undefined);
     }
   }, [open, itemToEdit]);
 
   const handleSave = () => {
     if (name.trim() && brandId) {
-      onSave({ id: itemToEdit?.id, name: name.trim(), brandId });
+      onSave({ name: name.trim(), brandId });
       setOpen(false);
     }
   };
@@ -157,7 +154,7 @@ const ModelFormDialog: React.FC<{
 // Form for adding/editing Terms, which use a textarea
 const TermFormDialog: React.FC<{
   itemToEdit?: TermAndCondition;
-  onSave: (data: { id?: string; text: string }) => void;
+  onSave: (data: { text: string }) => void;
   dialogTitle: string;
 }> = ({ itemToEdit, onSave, dialogTitle }) => {
   const [text, setText] = useState(itemToEdit?.text || '');
@@ -166,14 +163,12 @@ const TermFormDialog: React.FC<{
   useEffect(() => {
     if (open) {
       setText(itemToEdit?.text || '');
-    } else {
-        setText('');
     }
   }, [open, itemToEdit]);
 
   const handleSave = () => {
     if (text.trim()) {
-      onSave({ id: itemToEdit?.id, text: text.trim() });
+      onSave({ text: text.trim() });
       setOpen(false);
     }
   };
@@ -215,31 +210,12 @@ const TermFormDialog: React.FC<{
 export function CatalogManager({
   catalog, onAddItem, onUpdateItem, onDeleteItem
 }: CatalogManagerProps) {
-  
-  const handleSaveNameBased = (collectionName: CollectionName) => (data: { id?: string; name: string }) => {
-    const { id, ...itemData } = data;
+
+  const handleSave = (collectionName: keyof CatalogData, id?: string) => (itemData: any) => {
     if (id) {
       onUpdateItem(collectionName, id, itemData);
     } else {
       onAddItem(collectionName, itemData);
-    }
-  };
-
-  const handleSaveModel = (data: { id?: string; name: string; brandId: string }) => {
-    const { id, ...itemData } = data;
-    if (id) {
-      onUpdateItem('models', id, itemData);
-    } else {
-      onAddItem('models', itemData);
-    }
-  };
-
-  const handleSaveTerm = (data: { id?: string; text: string }) => {
-    const { id, ...itemData } = data;
-    if (id) {
-      onUpdateItem('terms', id, itemData);
-    } else {
-      onAddItem('terms', itemData);
     }
   };
 
@@ -258,7 +234,7 @@ export function CatalogManager({
       {/* Marcas */}
       <TabsContent value="brands" className="mt-4">
         <div className="flex justify-end mb-4">
-            <NameBasedFormDialog onSave={handleSaveNameBased('brands')} dialogTitle="Añadir/Editar Marca" itemName="Marca" />
+            <NameBasedFormDialog onSave={handleSave('brands')} dialogTitle="Añadir Nueva Marca" itemName="Marca" />
         </div>
         <div className="rounded-md border max-h-96 overflow-y-auto">
             <Table>
@@ -268,7 +244,7 @@ export function CatalogManager({
                         <TableRow key={item.id}>
                             <TableCell>{item.name}</TableCell>
                             <TableCell className="text-right">
-                                <NameBasedFormDialog itemToEdit={item} onSave={handleSaveNameBased('brands')} dialogTitle="Editar Marca" itemName="Marca" />
+                                <NameBasedFormDialog itemToEdit={item} onSave={handleSave('brands', item.id)} dialogTitle="Editar Marca" itemName="Marca" />
                                 <Button variant="ghost" size="icon" onClick={() => onDeleteItem('brands', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </TableCell>
                         </TableRow>
@@ -281,7 +257,7 @@ export function CatalogManager({
       {/* Modelos */}
       <TabsContent value="models" className="mt-4">
          <div className="flex justify-end mb-4">
-            <ModelFormDialog onSave={handleSaveModel} dialogTitle="Añadir Nuevo Modelo" brands={catalog.brands} />
+            <ModelFormDialog onSave={handleSave('models')} dialogTitle="Añadir Nuevo Modelo" brands={catalog.brands} />
         </div>
         <div className="rounded-md border max-h-96 overflow-y-auto">
             <Table>
@@ -292,7 +268,7 @@ export function CatalogManager({
                             <TableCell>{item.name}</TableCell>
                             <TableCell>{catalog.brands.find(b => b.id === item.brandId)?.name || 'N/A'}</TableCell>
                             <TableCell className="text-right">
-                                <ModelFormDialog itemToEdit={item} onSave={handleSaveModel} dialogTitle="Editar Modelo" brands={catalog.brands} />
+                                <ModelFormDialog itemToEdit={item} onSave={handleSave('models', item.id)} dialogTitle="Editar Modelo" brands={catalog.brands} />
                                 <Button variant="ghost" size="icon" onClick={() => onDeleteItem('models', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </TableCell>
                         </TableRow>
@@ -305,7 +281,7 @@ export function CatalogManager({
       {/* Colores */}
        <TabsContent value="colors" className="mt-4">
         <div className="flex justify-end mb-4">
-            <NameBasedFormDialog onSave={handleSaveNameBased('colors')} dialogTitle="Añadir/Editar Color" itemName="Color" />
+            <NameBasedFormDialog onSave={handleSave('colors')} dialogTitle="Añadir Nuevo Color" itemName="Color" />
         </div>
         <div className="rounded-md border max-h-96 overflow-y-auto">
             <Table>
@@ -315,7 +291,7 @@ export function CatalogManager({
                         <TableRow key={item.id}>
                             <TableCell>{item.name}</TableCell>
                             <TableCell className="text-right">
-                                <NameBasedFormDialog itemToEdit={item} onSave={handleSaveNameBased('colors')} dialogTitle="Editar Color" itemName="Color" />
+                                <NameBasedFormDialog itemToEdit={item} onSave={handleSave('colors', item.id)} dialogTitle="Editar Color" itemName="Color" />
                                 <Button variant="ghost" size="icon" onClick={() => onDeleteItem('colors', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </TableCell>
                         </TableRow>
@@ -328,7 +304,7 @@ export function CatalogManager({
       {/* Accesorios */}
       <TabsContent value="accessories" className="mt-4">
         <div className="flex justify-end mb-4">
-            <NameBasedFormDialog onSave={handleSaveNameBased('accessories')} dialogTitle="Añadir/Editar Accesorio" itemName="Accesorio" />
+            <NameBasedFormDialog onSave={handleSave('accessories')} dialogTitle="Añadir Nuevo Accesorio" itemName="Accesorio" />
         </div>
         <div className="rounded-md border max-h-96 overflow-y-auto">
             <Table>
@@ -338,7 +314,7 @@ export function CatalogManager({
                         <TableRow key={item.id}>
                             <TableCell>{item.name}</TableCell>
                             <TableCell className="text-right">
-                                <NameBasedFormDialog itemToEdit={item} onSave={handleSaveNameBased('accessories')} dialogTitle="Editar Accesorio" itemName="Accesorio" />
+                                <NameBasedFormDialog itemToEdit={item} onSave={handleSave('accessories', item.id)} dialogTitle="Editar Accesorio" itemName="Accesorio" />
                                 <Button variant="ghost" size="icon" onClick={() => onDeleteItem('accessories', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </TableCell>
                         </TableRow>
@@ -351,7 +327,7 @@ export function CatalogManager({
       {/* Condiciones */}
       <TabsContent value="conditions" className="mt-4">
         <div className="flex justify-end mb-4">
-            <NameBasedFormDialog onSave={handleSaveNameBased('conditions')} dialogTitle="Añadir/Editar Condición" itemName="Condición" />
+            <NameBasedFormDialog onSave={handleSave('conditions')} dialogTitle="Añadir Nueva Condición" itemName="Condición" />
         </div>
         <div className="rounded-md border max-h-96 overflow-y-auto">
             <Table>
@@ -361,7 +337,7 @@ export function CatalogManager({
                         <TableRow key={item.id}>
                             <TableCell>{item.name}</TableCell>
                             <TableCell className="text-right">
-                                <NameBasedFormDialog itemToEdit={item} onSave={handleSaveNameBased('conditions')} dialogTitle="Editar Condición" itemName="Condición" />
+                                <NameBasedFormDialog itemToEdit={item} onSave={handleSave('conditions', item.id)} dialogTitle="Editar Condición" itemName="Condición" />
                                 <Button variant="ghost" size="icon" onClick={() => onDeleteItem('conditions', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </TableCell>
                         </TableRow>
@@ -374,7 +350,7 @@ export function CatalogManager({
       {/* Servicios */}
       <TabsContent value="services" className="mt-4">
         <div className="flex justify-end mb-4">
-            <NameBasedFormDialog onSave={handleSaveNameBased('services')} dialogTitle="Añadir/Editar Servicio" itemName="Servicio" />
+            <NameBasedFormDialog onSave={handleSave('services')} dialogTitle="Añadir Nuevo Servicio" itemName="Servicio" />
         </div>
         <div className="rounded-md border max-h-96 overflow-y-auto">
             <Table>
@@ -384,7 +360,7 @@ export function CatalogManager({
                         <TableRow key={item.id}>
                             <TableCell>{item.name}</TableCell>
                             <TableCell className="text-right">
-                                <NameBasedFormDialog itemToEdit={item} onSave={handleSaveNameBased('services')} dialogTitle="Editar Servicio" itemName="Servicio" />
+                                <NameBasedFormDialog itemToEdit={item} onSave={handleSave('services', item.id)} dialogTitle="Editar Servicio" itemName="Servicio" />
                                 <Button variant="ghost" size="icon" onClick={() => onDeleteItem('services', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </TableCell>
                         </TableRow>
@@ -397,7 +373,7 @@ export function CatalogManager({
       {/* Terminos */}
       <TabsContent value="terms" className="mt-4">
         <div className="flex justify-end mb-4">
-            <TermFormDialog onSave={handleSaveTerm} dialogTitle="Añadir Nuevo Término" />
+            <TermFormDialog onSave={handleSave('terms')} dialogTitle="Añadir Nuevo Término" />
         </div>
          <div className="rounded-md border max-h-96 overflow-y-auto">
             <Table>
@@ -407,7 +383,7 @@ export function CatalogManager({
                         <TableRow key={item.id}>
                             <TableCell className="whitespace-pre-wrap">{item.text}</TableCell>
                             <TableCell className="text-right">
-                                <TermFormDialog itemToEdit={item} onSave={handleSaveTerm} dialogTitle="Editar Término" />
+                                <TermFormDialog itemToEdit={item} onSave={handleSave('terms', item.id)} dialogTitle="Editar Término" />
                                 <Button variant="ghost" size="icon" onClick={() => onDeleteItem('terms', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </TableCell>
                         </TableRow>
