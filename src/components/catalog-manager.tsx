@@ -10,20 +10,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { CatalogData, Brand, Model } from '@/lib/types';
+import type { CatalogData, Brand, Model, TermAndCondition, Color, Accessory, Condition, Service } from '@/lib/types';
 import { Textarea } from './ui/textarea';
 
-type CollectionName = keyof Omit<CatalogData, 'terms'> | 'terms';
+type CollectionName = keyof CatalogData;
 
 interface CatalogManagerProps {
     catalog: CatalogData;
-    onAddItem: (collectionName: any, item: any) => Promise<void>;
-    onUpdateItem: (collectionName: any, id: string, item: any) => Promise<void>;
-    onDeleteItem: (collectionName: any, id: string) => Promise<void>;
+    onAddItem: (collectionName: CollectionName, item: any) => Promise<void>;
+    onUpdateItem: (collectionName: CollectionName, id: string, item: any) => Promise<void>;
+    onDeleteItem: (collectionName: CollectionName, id: string) => Promise<void>;
 }
 
 const AddItemDialog: React.FC<{
-  onAddItem: (nameOrText: string, brandId?: string) => void;
+  onAddItem: (itemData: any) => void;
   itemName: string;
   brands?: Brand[];
   hasBrandSelection?: boolean;
@@ -35,7 +35,16 @@ const AddItemDialog: React.FC<{
 
   const handleAdd = () => {
     if (name.trim() && (!hasBrandSelection || brandId)) {
-      onAddItem(name.trim(), brandId);
+      const itemData: any = {};
+      if (isTextArea) {
+        itemData.text = name.trim();
+      } else {
+        itemData.name = name.trim();
+      }
+      if (hasBrandSelection && brandId) {
+        itemData.brandId = brandId;
+      }
+      onAddItem(itemData);
       setName('');
       setBrandId(undefined);
       setOpen(false);
@@ -57,7 +66,7 @@ const AddItemDialog: React.FC<{
           {hasBrandSelection && brands && (
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="brand" className="text-right">Marca</Label>
-              <Select onValueChange={setBrandId}>
+              <Select onValueChange={setBrandId} value={brandId}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Selecciona una marca" />
                 </SelectTrigger>
@@ -91,7 +100,7 @@ const AddItemDialog: React.FC<{
 
 const EditItemDialog: React.FC<{
     item: { id: string; name?: string; text?: string; brandId?: string };
-    onUpdateItem: (id: string, nameOrText: string, brandId?: string) => void;
+    onUpdateItem: (id: string, itemData: any) => void;
     itemName: string;
     brands?: Brand[];
     hasBrandSelection?: boolean;
@@ -110,7 +119,16 @@ const EditItemDialog: React.FC<{
 
     const handleUpdate = () => {
       if (name.trim() && (!hasBrandSelection || brandId)) {
-        onUpdateItem(item.id, name.trim(), brandId);
+        const itemData: any = {};
+         if (isTextArea) {
+            itemData.text = name.trim();
+        } else {
+            itemData.name = name.trim();
+        }
+        if (hasBrandSelection && brandId) {
+            itemData.brandId = brandId;
+        }
+        onUpdateItem(item.id, itemData);
         setOpen(false);
       }
     };
@@ -166,8 +184,8 @@ const EditItemDialog: React.FC<{
 const CatalogTable = <T extends { id: string; name?: string; text?: string }>({ title, items, onAddItem, onUpdateItem, onDeleteItem, brands, hasBrandSelection, isTextArea }: {
   title: string;
   items: T[];
-  onAddItem: (nameOrText: string, brandId?: string) => void;
-  onUpdateItem: (id: string, nameOrText: string, brandId?: string) => void;
+  onAddItem: (itemData: any) => void;
+  onUpdateItem: (id: string, itemData: any) => void;
   onDeleteItem: (id: string) => void;
   brands?: Brand[];
   hasBrandSelection?: boolean;
@@ -226,30 +244,12 @@ export function CatalogManager({
   catalog, onAddItem, onUpdateItem, onDeleteItem
 }: CatalogManagerProps) {
   
-  const handleAddItem = (collectionName: CollectionName, isTextArea: boolean = false) => (nameOrText: string, brandId?: string) => {
-    const newItem: any = {};
-    if (isTextArea) {
-      newItem.text = nameOrText;
-    } else {
-      newItem.name = nameOrText;
-    }
-    if (brandId) {
-      newItem.brandId = brandId;
-    }
-    onAddItem(collectionName, newItem);
+  const handleAddItem = (collectionName: CollectionName) => (itemData: any) => {
+    onAddItem(collectionName, itemData);
   };
   
-  const handleUpdateItem = (collectionName: CollectionName, isTextArea: boolean = false) => (id: string, nameOrText: string, brandId?: string) => {
-    const updatedItem: any = {};
-    if (isTextArea) {
-        updatedItem.text = nameOrText;
-    } else {
-        updatedItem.name = nameOrText;
-    }
-    if (brandId) {
-        updatedItem.brandId = brandId;
-    }
-    onUpdateItem(collectionName, id, updatedItem);
+  const handleUpdateItem = (collectionName: CollectionName) => (id: string, itemData: any) => {
+    onUpdateItem(collectionName, id, itemData);
   };
 
   const handleDeleteItem = (collectionName: CollectionName) => (id: string) => {
@@ -286,8 +286,10 @@ export function CatalogManager({
         <CatalogTable title="Servicios" items={catalog.services} onAddItem={handleAddItem('services')} onUpdateItem={handleUpdateItem('services')} onDeleteItem={handleDeleteItem('services')} />
       </TabsContent>
       <TabsContent value="terms" className="mt-4">
-        <CatalogTable title="Términos" items={catalog.terms} onAddItem={handleAddItem('terms', true)} onUpdateItem={handleUpdateItem('terms', true)} onDeleteItem={handleDeleteItem('terms')} isTextArea/>
+        <CatalogTable title="Términos" items={catalog.terms} onAddItem={handleAddItem('terms')} onUpdateItem={handleUpdateItem('terms')} onDeleteItem={handleDeleteItem('terms')} isTextArea/>
       </TabsContent>
     </Tabs>
   );
 }
+
+    
