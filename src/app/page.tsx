@@ -58,11 +58,11 @@ export default function Home() {
         setServices(servicesData);
         setTerms(termsData);
         setRepairRequests(repairRequestsData);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching data from Firestore:", error);
         toast({
           title: "Error de Carga",
-          description: "No se pudieron cargar los datos desde la base de datos. Es posible que necesites crear índices en Firestore. Revisa la consola para más detalles.",
+          description: `No se pudieron cargar los datos. Es posible que necesites crear índices en Firestore. ${error.message}`,
           variant: "destructive",
           duration: 10000,
         });
@@ -104,18 +104,19 @@ export default function Home() {
         handlePrint(fullRequest);
     } catch (error) {
         console.error("Error adding repair request:", error);
+        toast({ title: "Error", description: "No se pudo agregar la solicitud.", variant: "destructive" });
     }
   };
 
   const handleUpdateRepairRequest = async (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => {
       try {
         await updateRepairRequestWithDevices(id, data);
-        // refetch requests to show updated data
         const updatedRequests = await getRepairRequests();
         setRepairRequests(updatedRequests);
-
+        toast({ title: "Actualizado", description: "La solicitud de reparación se ha actualizado.", variant: "success" });
       } catch (error) {
           console.error("Failed to update repair request:", error)
+          toast({ title: "Error", description: "No se pudo actualizar la solicitud.", variant: "destructive" });
       }
   }
 
@@ -225,41 +226,58 @@ export default function Home() {
                   <CatalogManager 
                     catalog={catalog}
                     onAddItem={async (collectionName, item) => {
-                      const id = await addItem(collectionName, item);
-                      const fullItem = { ...item, id };
-                      // This is a bit verbose, but ensures type safety
-                      switch(collectionName) {
-                        case 'brands': setBrands(prev => [...prev, fullItem as Brand]); break;
-                        case 'models': setModels(prev => [...prev, fullItem as Model]); break;
-                        case 'colors': setColors(prev => [...prev, fullItem as Color]); break;
-                        case 'accessories': setAccessories(prev => [...prev, fullItem as Accessory]); break;
-                        case 'conditions': setConditions(prev => [...prev, fullItem as Condition]); break;
-                        case 'services': setServices(prev => [...prev, fullItem as Service]); break;
-                        case 'terms': setTerms(prev => [...prev, fullItem as TermAndCondition]); break;
+                      try {
+                          const id = await addItem(collectionName, item);
+                          const fullItem = { ...item, id };
+                          switch(collectionName) {
+                            case 'brands': setBrands(prev => [...prev, fullItem as Brand]); break;
+                            case 'models': setModels(prev => [...prev, fullItem as Model]); break;
+                            case 'colors': setColors(prev => [...prev, fullItem as Color]); break;
+                            case 'accessories': setAccessories(prev => [...prev, fullItem as Accessory]); break;
+                            case 'conditions': setConditions(prev => [...prev, fullItem as Condition]); break;
+                            case 'services': setServices(prev => [...prev, fullItem as Service]); break;
+                            case 'terms': setTerms(prev => [...prev, fullItem as TermAndCondition]); break;
+                          }
+                          toast({ title: "Agregado", description: "El elemento se ha añadido al catálogo.", variant: "success" });
+                      } catch (error) {
+                          console.error("Error adding item:", error);
+                          toast({ title: "Error", description: "No se pudo añadir el elemento.", variant: "destructive" });
                       }
                     }}
                     onUpdateItem={async (collectionName, id, item) => {
-                      await updateItem(collectionName, id, item);
-                      switch(collectionName) {
-                        case 'brands': setBrands(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
-                        case 'models': setModels(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
-                        case 'colors': setColors(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
-                        case 'accessories': setAccessories(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
-                        case 'conditions': setConditions(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
-                        case 'services': setServices(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
-                        case 'terms': setTerms(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
+                      try {
+                        await updateItem(collectionName, id, item);
+                        switch(collectionName) {
+                          case 'brands': setBrands(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
+                          case 'models': setModels(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
+                          case 'colors': setColors(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
+                          case 'accessories': setAccessories(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
+                          case 'conditions': setConditions(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
+                          case 'services': setServices(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
+                          case 'terms': setTerms(prev => prev.map(i => i.id === id ? {...i, ...item} : i)); break;
+                        }
+                        toast({ title: "Actualizado", description: "El elemento del catálogo se ha actualizado.", variant: "success" });
+                      } catch (error) {
+                          console.error("Error updating item:", error);
+                          toast({ title: "Error", description: "No se pudo actualizar el elemento.", variant: "destructive" });
                       }
                     }}
                     onDeleteItem={async (collectionName, id) => {
-                       await deleteItem(collectionName, id);
-                       switch(collectionName) {
-                        case 'brands': setBrands(prev => prev.filter(i => i.id !== id)); break;
-                        case 'models': setModels(prev => prev.filter(i => i.id !== id)); break;
-                        case 'colors': setColors(prev => prev.filter(i => i.id !== id)); break;
-                        case 'accessories': setAccessories(prev => prev.filter(i => i.id !== id)); break;
-                        case 'conditions': setConditions(prev => prev.filter(i => i.id !== id)); break;
-                        case 'services': setServices(prev => prev.filter(i => i.id !== id)); break;
-                        case 'terms': setTerms(prev => prev.filter(i => i.id !== id)); break;
+                      try {
+                        await deleteItem(collectionName, id);
+                        switch(collectionName) {
+                          case 'brands': setBrands(prev => prev.filter(i => i.id !== id)); break;
+                          case 'models': setModels(prev => prev.filter(i => i.id !== id)); break;
+                          case 'colors': setColors(prev => prev.filter(i => i.id !== id)); break;
+                          case 'accessories': setAccessories(prev => prev.filter(i => i.id !== id)); break;
+                          case 'conditions': setConditions(prev => prev.filter(i => i.id !== id)); break;
+                          case 'services': setServices(prev => prev.filter(i => i.id !== id)); break;
+                          case 'terms': setTerms(prev => prev.filter(i => i.id !== id)); break;
+                        }
+                        toast({ title: "Eliminado", description: "El elemento del catálogo ha sido eliminado.", variant: "success" });
+                      } catch (error) {
+                          console.error("Error deleting item:", error);
+                          toast({ title: "Error", description: "No se pudo eliminar el elemento.", variant: "destructive" });
                       }
                     }}
                   />

@@ -10,10 +10,20 @@ type CollectionName = 'brands' | 'models' | 'colors' | 'accessories' | 'conditio
 
 // Generic Functions
 export const getCollection = async <T extends { name?: string, text?: string }>(collectionName: CollectionName): Promise<T[]> => {
-    const isTerms = collectionName === 'terms';
-    const q = query(collection(db, collectionName), orderBy(isTerms ? 'text' : 'name'));
+    // The orderBy clause was causing issues when Firestore indexes were not set up.
+    // A simple query is more robust for this starter template.
+    const q = query(collection(db, collectionName));
     const querySnapshot = await getDocs(q);
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    
+    // Manual sort after fetching
+    if (data.length > 0) {
+        if ('name' in data[0]) {
+            data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        } else if ('text' in data[0]) {
+            data.sort((a, b) => (a.text || '').localeCompare(b.text || ''));
+        }
+    }
     return data;
 };
 
@@ -41,51 +51,47 @@ export const getRepairRequests = async (): Promise<RepairRequest[]> => {
         const data = doc.data();
         const devicesSnapshot = await getDocs(collection(db, `repairRequests/${doc.id}/devices`));
         const devices = devicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as DeviceInRequest));
+        
+        // Ensure createdAt is handled correctly, even if it's not yet set on the server
+        const createdAt = data.createdAt ? data.createdAt.toDate().toISOString() : new Date().toISOString();
+
         return { 
             id: doc.id, 
             ...data, 
-            createdAt: data.createdAt.toDate().toISOString(),
+            createdAt,
             devices 
         } as RepairRequest;
     }));
 };
 
 export const addRepairRequest = async (requestData: Omit<RepairRequest, 'id' | 'createdAt' | 'folio'> & {folio: number | null}) => {
-    const batch = writeBatch(db);
+    return runTransaction(db, async (transaction) => {
+        const counterRef = doc(db, "counters", "repairRequests");
+        const counterSnap = await transaction.get(counterRef);
+        
+        let nextFolio = 1;
+        if (counterSnap.exists()) {
+            nextFolio = counterSnap.data().currentFolio + 1;
+        }
+        transaction.set(counterRef, { currentFolio: nextFolio }, { merge: true });
 
-    // Get the highest folio number to increment it
-    const counterRef = doc(db, "counters", "repairRequests");
-    
-    // Use a transaction to safely increment the folio
-    const newFolio = await runTransaction(db, async (transaction) => {
-      const counterSnap = await transaction.get(counterRef);
-      let nextFolio = 1;
-      if (counterSnap.exists()) {
-        nextFolio = counterSnap.data().currentFolio + 1;
-      }
-      transaction.set(counterRef, { currentFolio: nextFolio }, { merge: true });
-      return nextFolio;
+        const newRequestRef = doc(collection(db, "repairRequests"));
+        const { devices, ...request } = requestData;
+
+        transaction.set(newRequestRef, {
+            ...request,
+            folio: nextFolio,
+            status: 'Ingresado',
+            createdAt: serverTimestamp(),
+        });
+
+        devices.forEach(device => {
+            const deviceRef = doc(collection(db, `repairRequests/${newRequestRef.id}/devices`));
+            transaction.set(deviceRef, device);
+        });
+
+        return { id: newRequestRef.id, folio: nextFolio };
     });
-
-    
-    const newRequestRef = doc(collection(db, "repairRequests"));
-    
-    const { devices, ...request } = requestData;
-
-    batch.set(newRequestRef, {
-        ...request,
-        folio: newFolio,
-        status: 'Ingresado',
-        createdAt: serverTimestamp(),
-    });
-
-    devices.forEach(device => {
-        const deviceRef = doc(collection(db, `repairRequests/${newRequestRef.id}/devices`));
-        batch.set(deviceRef, device);
-    });
-
-    await batch.commit();
-    return { id: newRequestRef.id, folio: newFolio };
 };
 
 export const updateRepairRequest = async (id: string, data: Partial<Omit<RepairRequest, 'devices'>>) => {
@@ -106,10 +112,13 @@ export const updateRepairRequestWithDevices = async (id: string, data: Omit<Repa
     devices.forEach(device => {
         if (!device.id) {
             console.error("Device missing ID, cannot update:", device);
-            return; // or throw an error
+            return;
         }
+        // Correctly get the reference to the device document
         const deviceRef = doc(db, `repairRequests/${id}/devices`, device.id);
-        const { id: deviceId, ...deviceData } = device; // remove id from data object
+        
+        // Create a separate object for the update, excluding the 'id' field
+        const { id: deviceId, ...deviceData } = device;
         batch.update(deviceRef, deviceData);
     });
     
