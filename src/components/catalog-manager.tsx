@@ -35,6 +35,8 @@ const NameBasedFormDialog: React.FC<{
   useEffect(() => {
     if (open) {
       setName(itemToEdit?.name || '');
+    } else {
+      setName('');
     }
   }, [open, itemToEdit]);
 
@@ -93,6 +95,9 @@ const ModelFormDialog: React.FC<{
     if (open) {
       setName(itemToEdit?.name || '');
       setBrandId(itemToEdit?.brandId);
+    } else {
+        setName('');
+        setBrandId(undefined);
     }
   }, [open, itemToEdit]);
 
@@ -161,6 +166,8 @@ const TermFormDialog: React.FC<{
   useEffect(() => {
     if (open) {
       setText(itemToEdit?.text || '');
+    } else {
+        setText('');
     }
   }, [open, itemToEdit]);
 
