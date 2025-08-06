@@ -226,7 +226,7 @@ export default function Home() {
                     catalog={catalog}
                     onAddItem={async (collectionName, item) => {
                       const id = await addItem(collectionName, item);
-                      const fullItem = { id, ...item };
+                      const fullItem = { ...item, id };
                       // This is a bit verbose, but ensures type safety
                       switch(collectionName) {
                         case 'brands': setBrands(prev => [...prev, fullItem as Brand]); break;
@@ -275,7 +275,3 @@ export default function Home() {
     </>
   );
 }
-
-    
-
-    
