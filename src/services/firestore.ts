@@ -10,21 +10,15 @@ type CollectionName = 'brands' | 'models' | 'colors' | 'accessories' | 'conditio
 
 // Generic Functions
 export const getCollection = async <T extends { name?: string, text?: string }>(collectionName: CollectionName): Promise<T[]> => {
-    // The orderBy clause was causing issues when Firestore indexes were not set up.
-    // A simple query is more robust for this starter template.
-    // We sort the data manually after fetching it.
-    const q = query(collection(db, collectionName));
+    // Adding a specific orderBy clause is crucial for Firestore to handle the query predictably,
+    // especially in apps with real-time updates, preventing race conditions or malformed queries
+    // that can lead to 400 Bad Request errors on subsequent write operations.
+    const isTerms = collectionName === 'terms';
+    const q = query(collection(db, collectionName), orderBy(isTerms ? "text" : "name"));
+    
     const querySnapshot = await getDocs(q);
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
     
-    // Manual sort after fetching
-    if (data.length > 0) {
-        if ('name' in data[0]) {
-            data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        } else if ('text' in data[0]) {
-            data.sort((a, b) => (a.text || '').localeCompare(b.text || ''));
-        }
-    }
     return data;
 };
 
