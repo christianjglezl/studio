@@ -22,31 +22,25 @@ interface CatalogManagerProps {
     onDeleteItem: (collectionName: CollectionName, id: string) => Promise<void>;
 }
 
-const AddItemDialog: React.FC<{
-  onAddItem: (itemData: any) => void;
+// Simplified form for adding/editing items with a single 'name' field
+const NameBasedFormDialog: React.FC<{
+  itemToEdit?: { id: string; name: string };
+  onSave: (data: { id?: string; name: string }) => void;
+  dialogTitle: string;
   itemName: string;
-  brands?: Brand[];
-  hasBrandSelection?: boolean;
-  isTextArea?: boolean;
-}> = ({ onAddItem, itemName, brands, hasBrandSelection = false, isTextArea = false }) => {
-  const [name, setName] = useState('');
-  const [brandId, setBrandId] = useState<string | undefined>(undefined);
+}> = ({ itemToEdit, onSave, dialogTitle, itemName }) => {
+  const [name, setName] = useState(itemToEdit?.name || '');
   const [open, setOpen] = useState(false);
 
-  const handleAdd = () => {
-    if (name.trim() && (!hasBrandSelection || brandId)) {
-      const itemData: any = {};
-      if (isTextArea) {
-        itemData.text = name.trim();
-      } else {
-        itemData.name = name.trim();
-      }
-      if (hasBrandSelection && brandId) {
-        itemData.brandId = brandId;
-      }
-      onAddItem(itemData);
-      setName('');
-      setBrandId(undefined);
+  useEffect(() => {
+    if (open) {
+      setName(itemToEdit?.name || '');
+    }
+  }, [open, itemToEdit]);
+
+  const handleSave = () => {
+    if (name.trim()) {
+      onSave({ id: itemToEdit?.id, name: name.trim() });
       setOpen(false);
     }
   };
@@ -54,206 +48,192 @@ const AddItemDialog: React.FC<{
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo {itemName}
-        </Button>
+        {itemToEdit ? (
+          <Button variant="ghost" size="icon">
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+            <span className="sr-only">Editar</span>
+          </Button>
+        ) : (
+          <Button size="sm">
+            <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo {itemName}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Añadir Nuevo {itemName}</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          {hasBrandSelection && brands && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="brand" className="text-right">Marca</Label>
-              <Select onValueChange={setBrandId} value={brandId}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Selecciona una marca" />
-                </SelectTrigger>
-                <SelectContent>
-                  {brands.map(brand => (
-                    <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">{isTextArea ? 'Texto' : 'Nombre'}</Label>
-            {isTextArea ? (
-                 <Textarea id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
-            ) : (
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
-            )}
+            <Label htmlFor="name" className="text-right">Nombre</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
           </div>
         </div>
         <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancelar</Button>
-          </DialogClose>
-          <Button onClick={handleAdd}>Añadir</Button>
+          <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+          <Button onClick={handleSave} disabled={!name.trim()}>Guardar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
-const EditItemDialog: React.FC<{
-    item: { id: string; name?: string; text?: string; brandId?: string };
-    onUpdateItem: (id: string, itemData: any) => void;
-    itemName: string;
-    brands?: Brand[];
-    hasBrandSelection?: boolean;
-    isTextArea?: boolean;
-  }> = ({ item, onUpdateItem, itemName, brands, hasBrandSelection = false, isTextArea = false }) => {
-    const [name, setName] = useState(item.name || item.text || '');
-    const [brandId, setBrandId] = useState<string | undefined>(item.brandId);
-    const [open, setOpen] = useState(false);
-  
-    useEffect(() => {
-        if(open) {
-            setName(item.name || item.text || '');
-            setBrandId(item.brandId);
-        }
-    }, [open, item]);
+// Form for adding/editing Models, which require brand selection
+const ModelFormDialog: React.FC<{
+  itemToEdit?: Model;
+  onSave: (data: { id?: string; name: string; brandId: string }) => void;
+  dialogTitle: string;
+  brands: Brand[];
+}> = ({ itemToEdit, onSave, dialogTitle, brands }) => {
+  const [name, setName] = useState(itemToEdit?.name || '');
+  const [brandId, setBrandId] = useState<string | undefined>(itemToEdit?.brandId);
+  const [open, setOpen] = useState(false);
 
-    const handleUpdate = () => {
-      if (name.trim() && (!hasBrandSelection || brandId)) {
-        const itemData: any = {};
-         if (isTextArea) {
-            itemData.text = name.trim();
-        } else {
-            itemData.name = name.trim();
-        }
-        if (hasBrandSelection && brandId) {
-            itemData.brandId = brandId;
-        }
-        onUpdateItem(item.id, itemData);
-        setOpen(false);
-      }
-    };
-  
-    return (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-            <Button variant="ghost" size="icon">
-                <Pencil className="h-4 w-4 text-muted-foreground" />
-                <span className="sr-only">Editar</span>
-            </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Editar {itemName}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {hasBrandSelection && brands && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="brand-edit" className="text-right">Marca</Label>
-                <Select value={brandId} onValueChange={setBrandId}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Selecciona una marca" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands.map(brand => (
-                      <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name-edit" className="text-right">{isTextArea ? 'Texto' : 'Nombre'}</Label>
-              {isTextArea ? (
-                   <Textarea id="name-edit" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
-              ) : (
-                  <Input id="name-edit" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancelar</Button>
-            </DialogClose>
-            <Button onClick={handleUpdate}>Guardar Cambios</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
+  useEffect(() => {
+    if (open) {
+      setName(itemToEdit?.name || '');
+      setBrandId(itemToEdit?.brandId);
+    }
+  }, [open, itemToEdit]);
+
+  const handleSave = () => {
+    if (name.trim() && brandId) {
+      onSave({ id: itemToEdit?.id, name: name.trim(), brandId });
+      setOpen(false);
+    }
   };
 
-const CatalogTable = <T extends { id: string; name?: string; text?: string }>({ title, items, onAddItem, onUpdateItem, onDeleteItem, brands, hasBrandSelection, isTextArea }: {
-  title: string;
-  items: T[];
-  onAddItem: (itemData: any) => void;
-  onUpdateItem: (id: string, itemData: any) => void;
-  onDeleteItem: (id: string) => void;
-  brands?: Brand[];
-  hasBrandSelection?: boolean;
-  isTextArea?: boolean;
-}) => (
-  <div>
-    <div className="flex justify-end mb-4">
-      <AddItemDialog onAddItem={onAddItem} itemName={title.slice(0, -1)} brands={brands} hasBrandSelection={hasBrandSelection} isTextArea={isTextArea}/>
-    </div>
-    <div className="rounded-md border max-h-96 overflow-y-auto">
-      <Table>
-        <TableHeader className="sticky top-0 bg-secondary">
-          <TableRow>
-            <TableHead>{isTextArea ? 'Texto' : 'Nombre'}</TableHead>
-            {hasBrandSelection && <TableHead>Marca</TableHead>}
-            <TableHead className="text-right">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.length > 0 ? (
-            items.map((item) => {
-              const model = item as unknown as Model;
-              const brand = brands?.find(b => b.id === model.brandId);
-              return (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium whitespace-pre-wrap">{item.name || item.text}</TableCell>
-                {hasBrandSelection && <TableCell>{brand?.name || 'N/A'}</TableCell>}
-                <TableCell className="text-right">
-                  <EditItemDialog 
-                    item={item as Model} 
-                    onUpdateItem={onUpdateItem} 
-                    itemName={title.slice(0,-1)} 
-                    brands={brands} 
-                    hasBrandSelection={hasBrandSelection}
-                    isTextArea={isTextArea}
-                   />
-                  <Button variant="ghost" size="icon" onClick={() => onDeleteItem(item.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                    <span className="sr-only">Eliminar</span>
-                  </Button>
-                </TableCell>
-              </TableRow>
-            )})
-          ) : (
-            <TableRow>
-              <TableCell colSpan={hasBrandSelection ? 3 : 2} className="text-center text-muted-foreground">No se encontraron {title.toLowerCase()}.</TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  </div>
-);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {itemToEdit ? (
+          <Button variant="ghost" size="icon">
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+            <span className="sr-only">Editar</span>
+          </Button>
+        ) : (
+          <Button size="sm">
+            <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Modelo
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="brand" className="text-right">Marca</Label>
+            <Select onValueChange={setBrandId} value={brandId}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Selecciona una marca" />
+              </SelectTrigger>
+              <SelectContent>
+                {brands.map(brand => (
+                  <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name" className="text-right">Nombre</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+          <Button onClick={handleSave} disabled={!name.trim() || !brandId}>Guardar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Form for adding/editing Terms, which use a textarea
+const TermFormDialog: React.FC<{
+  itemToEdit?: TermAndCondition;
+  onSave: (data: { id?: string; text: string }) => void;
+  dialogTitle: string;
+}> = ({ itemToEdit, onSave, dialogTitle }) => {
+  const [text, setText] = useState(itemToEdit?.text || '');
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setText(itemToEdit?.text || '');
+    }
+  }, [open, itemToEdit]);
+
+  const handleSave = () => {
+    if (text.trim()) {
+      onSave({ id: itemToEdit?.id, text: text.trim() });
+      setOpen(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {itemToEdit ? (
+          <Button variant="ghost" size="icon">
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+            <span className="sr-only">Editar</span>
+          </Button>
+        ) : (
+          <Button size="sm">
+            <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nuevo Término
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="text" className="text-right">Texto</Label>
+            <Textarea id="text" value={text} onChange={(e) => setText(e.target.value)} className="col-span-3" />
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+          <Button onClick={handleSave} disabled={!text.trim()}>Guardar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 
 export function CatalogManager({
   catalog, onAddItem, onUpdateItem, onDeleteItem
 }: CatalogManagerProps) {
   
-  const handleAddItem = (collectionName: CollectionName) => (itemData: any) => {
-    onAddItem(collectionName, itemData);
-  };
-  
-  const handleUpdateItem = (collectionName: CollectionName) => (id: string, itemData: any) => {
-    onUpdateItem(collectionName, id, itemData);
+  const handleSaveNameBased = (collectionName: CollectionName) => (data: { id?: string; name: string }) => {
+    const { id, ...itemData } = data;
+    if (id) {
+      onUpdateItem(collectionName, id, itemData);
+    } else {
+      onAddItem(collectionName, itemData);
+    }
   };
 
-  const handleDeleteItem = (collectionName: CollectionName) => (id: string) => {
-    onDeleteItem(collectionName, id);
+  const handleSaveModel = (data: { id?: string; name: string; brandId: string }) => {
+    const { id, ...itemData } = data;
+    if (id) {
+      onUpdateItem('models', id, itemData);
+    } else {
+      onAddItem('models', itemData);
+    }
+  };
+
+  const handleSaveTerm = (data: { id?: string; text: string }) => {
+    const { id, ...itemData } = data;
+    if (id) {
+      onUpdateItem('terms', id, itemData);
+    } else {
+      onAddItem('terms', itemData);
+    }
   };
 
   return (
@@ -267,29 +247,168 @@ export function CatalogManager({
         <TabsTrigger value="services">Servicios</TabsTrigger>
         <TabsTrigger value="terms">Términos</TabsTrigger>
       </TabsList>
+
+      {/* Marcas */}
       <TabsContent value="brands" className="mt-4">
-        <CatalogTable title="Marcas" items={catalog.brands} onAddItem={handleAddItem('brands')} onUpdateItem={handleUpdateItem('brands')} onDeleteItem={handleDeleteItem('brands')} />
+        <div className="flex justify-end mb-4">
+            <NameBasedFormDialog onSave={handleSaveNameBased('brands')} dialogTitle="Añadir/Editar Marca" itemName="Marca" />
+        </div>
+        <div className="rounded-md border max-h-96 overflow-y-auto">
+            <Table>
+                <TableHeader className="sticky top-0 bg-secondary"><TableRow><TableHead>Nombre</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {catalog.brands.map(item => (
+                        <TableRow key={item.id}>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell className="text-right">
+                                <NameBasedFormDialog itemToEdit={item} onSave={handleSaveNameBased('brands')} dialogTitle="Editar Marca" itemName="Marca" />
+                                <Button variant="ghost" size="icon" onClick={() => onDeleteItem('brands', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
       </TabsContent>
+
+      {/* Modelos */}
       <TabsContent value="models" className="mt-4">
-        <CatalogTable title="Modelos" items={catalog.models} onAddItem={handleAddItem('models')} onUpdateItem={handleUpdateItem('models')} onDeleteItem={handleDeleteItem('models')} brands={catalog.brands} hasBrandSelection />
+         <div className="flex justify-end mb-4">
+            <ModelFormDialog onSave={handleSaveModel} dialogTitle="Añadir Nuevo Modelo" brands={catalog.brands} />
+        </div>
+        <div className="rounded-md border max-h-96 overflow-y-auto">
+            <Table>
+                <TableHeader className="sticky top-0 bg-secondary"><TableRow><TableHead>Nombre</TableHead><TableHead>Marca</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {catalog.models.map(item => (
+                        <TableRow key={item.id}>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell>{catalog.brands.find(b => b.id === item.brandId)?.name || 'N/A'}</TableCell>
+                            <TableCell className="text-right">
+                                <ModelFormDialog itemToEdit={item} onSave={handleSaveModel} dialogTitle="Editar Modelo" brands={catalog.brands} />
+                                <Button variant="ghost" size="icon" onClick={() => onDeleteItem('models', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
       </TabsContent>
-      <TabsContent value="colors" className="mt-4">
-        <CatalogTable title="Colores" items={catalog.colors} onAddItem={handleAddItem('colors')} onUpdateItem={handleUpdateItem('colors')} onDeleteItem={handleDeleteItem('colors')} />
+      
+      {/* Colores */}
+       <TabsContent value="colors" className="mt-4">
+        <div className="flex justify-end mb-4">
+            <NameBasedFormDialog onSave={handleSaveNameBased('colors')} dialogTitle="Añadir/Editar Color" itemName="Color" />
+        </div>
+        <div className="rounded-md border max-h-96 overflow-y-auto">
+            <Table>
+                <TableHeader className="sticky top-0 bg-secondary"><TableRow><TableHead>Nombre</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {catalog.colors.map(item => (
+                        <TableRow key={item.id}>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell className="text-right">
+                                <NameBasedFormDialog itemToEdit={item} onSave={handleSaveNameBased('colors')} dialogTitle="Editar Color" itemName="Color" />
+                                <Button variant="ghost" size="icon" onClick={() => onDeleteItem('colors', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
       </TabsContent>
+
+      {/* Accesorios */}
       <TabsContent value="accessories" className="mt-4">
-        <CatalogTable title="Accesorios" items={catalog.accessories} onAddItem={handleAddItem('accessories')} onUpdateItem={handleUpdateItem('accessories')} onDeleteItem={handleDeleteItem('accessories')} />
+        <div className="flex justify-end mb-4">
+            <NameBasedFormDialog onSave={handleSaveNameBased('accessories')} dialogTitle="Añadir/Editar Accesorio" itemName="Accesorio" />
+        </div>
+        <div className="rounded-md border max-h-96 overflow-y-auto">
+            <Table>
+                <TableHeader className="sticky top-0 bg-secondary"><TableRow><TableHead>Nombre</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {catalog.accessories.map(item => (
+                        <TableRow key={item.id}>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell className="text-right">
+                                <NameBasedFormDialog itemToEdit={item} onSave={handleSaveNameBased('accessories')} dialogTitle="Editar Accesorio" itemName="Accesorio" />
+                                <Button variant="ghost" size="icon" onClick={() => onDeleteItem('accessories', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
       </TabsContent>
+
+      {/* Condiciones */}
       <TabsContent value="conditions" className="mt-4">
-        <CatalogTable title="Condiciones" items={catalog.conditions} onAddItem={handleAddItem('conditions')} onUpdateItem={handleUpdateItem('conditions')} onDeleteItem={handleDeleteItem('conditions')} />
+        <div className="flex justify-end mb-4">
+            <NameBasedFormDialog onSave={handleSaveNameBased('conditions')} dialogTitle="Añadir/Editar Condición" itemName="Condición" />
+        </div>
+        <div className="rounded-md border max-h-96 overflow-y-auto">
+            <Table>
+                <TableHeader className="sticky top-0 bg-secondary"><TableRow><TableHead>Nombre</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {catalog.conditions.map(item => (
+                        <TableRow key={item.id}>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell className="text-right">
+                                <NameBasedFormDialog itemToEdit={item} onSave={handleSaveNameBased('conditions')} dialogTitle="Editar Condición" itemName="Condición" />
+                                <Button variant="ghost" size="icon" onClick={() => onDeleteItem('conditions', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
       </TabsContent>
+
+      {/* Servicios */}
       <TabsContent value="services" className="mt-4">
-        <CatalogTable title="Servicios" items={catalog.services} onAddItem={handleAddItem('services')} onUpdateItem={handleUpdateItem('services')} onDeleteItem={handleDeleteItem('services')} />
+        <div className="flex justify-end mb-4">
+            <NameBasedFormDialog onSave={handleSaveNameBased('services')} dialogTitle="Añadir/Editar Servicio" itemName="Servicio" />
+        </div>
+        <div className="rounded-md border max-h-96 overflow-y-auto">
+            <Table>
+                <TableHeader className="sticky top-0 bg-secondary"><TableRow><TableHead>Nombre</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {catalog.services.map(item => (
+                        <TableRow key={item.id}>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell className="text-right">
+                                <NameBasedFormDialog itemToEdit={item} onSave={handleSaveNameBased('services')} dialogTitle="Editar Servicio" itemName="Servicio" />
+                                <Button variant="ghost" size="icon" onClick={() => onDeleteItem('services', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
       </TabsContent>
+
+      {/* Terminos */}
       <TabsContent value="terms" className="mt-4">
-        <CatalogTable title="Términos" items={catalog.terms} onAddItem={handleAddItem('terms')} onUpdateItem={handleUpdateItem('terms')} onDeleteItem={handleDeleteItem('terms')} isTextArea/>
+        <div className="flex justify-end mb-4">
+            <TermFormDialog onSave={handleSaveTerm} dialogTitle="Añadir Nuevo Término" />
+        </div>
+         <div className="rounded-md border max-h-96 overflow-y-auto">
+            <Table>
+                <TableHeader className="sticky top-0 bg-secondary"><TableRow><TableHead>Texto</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {catalog.terms.map(item => (
+                        <TableRow key={item.id}>
+                            <TableCell className="whitespace-pre-wrap">{item.text}</TableCell>
+                            <TableCell className="text-right">
+                                <TermFormDialog itemToEdit={item} onSave={handleSaveTerm} dialogTitle="Editar Término" />
+                                <Button variant="ghost" size="icon" onClick={() => onDeleteItem('terms', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
       </TabsContent>
     </Tabs>
   );
 }
-
-    
