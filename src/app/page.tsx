@@ -10,7 +10,7 @@ import { CatalogManager } from '@/components/catalog-manager';
 import { RepairList } from '@/components/repair-list';
 import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, CatalogData, TermAndCondition } from '@/lib/types';
 import { Ticket } from '@/components/ticket';
-import { getCollection, addItem, updateItem, deleteItem, addRepairRequest, getRepairRequests, updateRepairRequest, updateRepairRequestWithDevices } from '@/services/firestore';
+import { getCollection, addItem, updateItem, deleteItem, addRepairRequest, getRepairRequests, updateRepairRequest, updateRepairRequestWithDevices, seedInitialData } from '@/services/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
@@ -37,6 +37,7 @@ export default function Home() {
   useEffect(() => {
     const fetchAllData = async () => {
       try {
+        await seedInitialData(); // This will only run if the DB is empty
         const [
           brandsData, modelsData, colorsData, accessoriesData, 
           conditionsData, servicesData, termsData, repairRequestsData
@@ -275,5 +276,7 @@ export default function Home() {
     </>
   );
 }
+
+    
 
     
