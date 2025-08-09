@@ -3,37 +3,35 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, writeBatch, serverTimestamp, getDoc, runTransaction } from 'firebase/firestore';
 import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition, RepairRequest, DeviceInRequest, CatalogData } from '@/lib/types';
 
+// This is a generic type for items in our catalog collections
 type CollectionType = Brand | Model | Color | Accessory | Condition | Service | TermAndCondition;
-type CollectionName = keyof Omit<CatalogData, 'terms'>;
 
-
-// Generic Functions
+// Generic Functions for Catalog Management
 export const getCollection = async <T extends { name?: string, text?: string }>(collectionName: keyof CatalogData): Promise<T[]> => {
     const q = query(collection(db, collectionName));
     const querySnapshot = await getDocs(q);
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
 
-    // Client-side sorting
-    if (data.length > 0) {
-        if (data.every(item => typeof item.name === 'string')) {
-            data.sort((a, b) => (a.name!).localeCompare(b.name!));
-        } else if (data.every(item => typeof item.text === 'string')) {
-            data.sort((a, b) => (a.text!).localeCompare(b.text!));
-        }
-    }
+    // Client-side sorting to avoid complex Firestore indexes for now
+    data.sort((a, b) => {
+        const nameA = a.name || a.text || '';
+        const nameB = b.name || b.text || '';
+        return nameA.localeCompare(nameB);
+    });
     
     return data;
 };
 
 export const addItem = async (collectionName: keyof CatalogData, item: Omit<CollectionType, 'id'>): Promise<string> => {
-    // This is the final, corrected implementation. It sends the item object directly.
+    // This is the simplest and most direct way to add a document.
+    // The `item` object is passed directly.
     const docRef = await addDoc(collection(db, collectionName), item);
     return docRef.id;
 };
 
 export const updateItem = async (collectionName: keyof CatalogData, id: string, item: Partial<Omit<CollectionType, 'id'>>): Promise<void> => {
     const docRef = doc(db, collectionName, id);
-    // This is the final, corrected implementation. It sends the item object directly.
+    // This is the correct way to update a document with new data.
     await updateDoc(docRef, item);
 };
 
@@ -52,7 +50,7 @@ export const getRepairRequests = async (): Promise<RepairRequest[]> => {
         const devicesSnapshot = await getDocs(collection(db, `repairRequests/${doc.id}/devices`));
         const devices = devicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as DeviceInRequest));
         
-        const createdAt = data.createdAt ? data.createdAt.toDate().toISOString() : new Date().toISOString();
+        const createdAt = data.createdAt?.toDate().toISOString() || new Date().toISOString();
 
         return { 
             id: doc.id, 
@@ -71,8 +69,11 @@ export const addRepairRequest = async (requestData: Omit<RepairRequest, 'id' | '
         let nextFolio = 1;
         if (counterSnap.exists()) {
             nextFolio = counterSnap.data().currentFolio + 1;
+        } else {
+            // Initialize the counter if it doesn't exist.
+            transaction.set(counterRef, { currentFolio: 1 });
         }
-        transaction.set(counterRef, { currentFolio: nextFolio }, { merge: true });
+        transaction.update(counterRef, { currentFolio: nextFolio });
 
         const newRequestRef = doc(collection(db, "repairRequests"));
         const { devices, ...request } = requestData;
@@ -85,8 +86,10 @@ export const addRepairRequest = async (requestData: Omit<RepairRequest, 'id' | '
         });
 
         devices.forEach(device => {
-            const deviceRef = doc(collection(db, `repairRequests/${newRequestRef.id}/devices`));
-            transaction.set(deviceRef, device);
+            // Assign a new random ID if the device doesn't have one
+            const deviceId = device.id || doc(collection(db, 'id')).id;
+            const deviceRef = doc(db, `repairRequests/${newRequestRef.id}/devices`, deviceId);
+            transaction.set(deviceRef, { ...device, id: deviceId });
         });
 
         return { id: newRequestRef.id, folio: nextFolio };
@@ -109,7 +112,7 @@ export const updateRepairRequestWithDevices = async (id: string, data: Omit<Repa
     devices.forEach(device => {
         if (!device.id) {
             console.error("Device missing ID, cannot update:", device);
-            return;
+            return; // Or create a new one if that's the desired behavior
         }
         const deviceRef = doc(db, `repairRequests/${id}/devices`, device.id);
         
