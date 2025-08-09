@@ -21,8 +21,8 @@ const statusColors: { [key in RepairStatus]: string } = {
   'En Revisión': '#f59e0b', // yellow-500
   'En Reparación': '#f97316', // orange-500
   Reparado: '#8b5cf6', // purple-500
-  'Listo para Entrega': '#22c55e', // green-500
-  Entregado: '#4b5563', // gray-600
+  'Listo para Entrega': '#6ee7b7', // emerald-300 (mint)
+  Entregado: '#22c55e', // green-500
   Cancelado: '#ef4444', // red-500
 };
 

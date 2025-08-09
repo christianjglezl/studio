@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -38,8 +39,8 @@ const statusColors: { [key in RepairStatus]: string } = {
   'En Revisión': 'bg-yellow-500',
   'En Reparación': 'bg-orange-500',
   Reparado: 'bg-purple-500',
-  'Listo para Entrega': 'bg-green-500',
-  Entregado: 'bg-gray-700',
+  'Listo para Entrega': 'bg-emerald-400', // Mint color
+  Entregado: 'bg-green-500',
   Cancelado: 'bg-red-500',
 };
 
