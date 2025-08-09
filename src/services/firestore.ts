@@ -1,5 +1,6 @@
 
 
+
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, writeBatch, serverTimestamp, getDoc, runTransaction } from 'firebase/firestore';
 import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition, RepairRequest, DeviceInRequest } from '@/lib/types';
@@ -14,6 +15,7 @@ export const getCollection = async <T extends { name?: string, text?: string }>(
     const querySnapshot = await getDocs(q);
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
 
+    // Client-side sorting
     if (data.length > 0) {
         if ('name' in data[0]! && data.every(item => typeof item.name === 'string')) {
             data.sort((a, b) => (a.name!).localeCompare(b.name!));
@@ -26,14 +28,14 @@ export const getCollection = async <T extends { name?: string, text?: string }>(
 };
 
 export const addItem = async (collectionName: CollectionName, item: Omit<CollectionType, 'id'>): Promise<string> => {
-    // This is the correct implementation. The item is passed directly.
+    // The item is passed directly. This is the correct implementation.
     const docRef = await addDoc(collection(db, collectionName), item);
     return docRef.id;
 };
 
 export const updateItem = async (collectionName: CollectionName, id: string, item: Partial<Omit<CollectionType, 'id'>>): Promise<void> => {
     const docRef = doc(db, collectionName, id);
-    // This is the correct implementation. The item is passed directly.
+    // The item is passed directly. This is the correct implementation.
     await updateDoc(docRef, item);
 };
 

@@ -120,7 +120,7 @@ export default function Home() {
       }
   }
 
-  const handleAddItem = async (collectionName: keyof Omit<CatalogData, 'terms'>, item: { name: string, brandId?: string }) => {
+  const handleAddItem = async (collectionName: keyof Omit<CatalogData, 'terms'>, item: { name: string; brandId?: string }) => {
     try {
       const id = await addItem(collectionName, item);
       const fullItem = { ...item, id };
@@ -135,7 +135,7 @@ export default function Home() {
       toast({ title: "Agregado", description: "El elemento se ha añadido al catálogo.", variant: "success" });
     } catch (error) {
       console.error("Error adding item:", error);
-      toast({ title: "Error", description: "No se pudo añadir el elemento.", variant: "destructive" });
+      toast({ title: "Error", description: `No se pudo añadir el elemento. ${error}`, variant: "destructive" });
     }
   };
   
