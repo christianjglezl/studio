@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
-const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/techcheck-x5724.firebasestorage.app/o/ETlogo1_TodoAzul_peqe%C3%B1o_centrado.png?alt=media&token=25351f33-1a29-4592-88b0-4593c1268c78";
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/techcheck-x5724.firebasestorage.app/o/ETlogo1_TodoAzul_peqe%C3%B1o_centrado.png?alt=media&token=a8084d07-d5e4-44dc-a7c0-fc123d651346";
 
 
 export default function Home() {

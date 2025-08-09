@@ -12,7 +12,7 @@ interface TicketProps {
   catalog: CatalogData;
 }
 
-const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/techcheck-x5724.firebasestorage.app/o/ETlogo1_TodoAzul_peqe%C3%B1o_centrado.png?alt=media&token=25351f33-1a29-4592-88b0-4593c1268c78";
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/techcheck-x5724.firebasestorage.app/o/ETlogo1_TodoAzul_peqe%C3%B1o_centrado.png?alt=media&token=a8084d07-d5e4-44dc-a7c0-fc123d651346";
 
 const getEntityName = <T extends { id: string; name: string }>(id: string, entities: T[]): string => {
   return entities.find(e => e.id === id)?.name || 'N/A';
