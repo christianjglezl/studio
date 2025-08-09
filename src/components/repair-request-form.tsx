@@ -82,7 +82,7 @@ const deviceSchema = z.object({
 
 const formSchema = z.object({
   clientName: z.string().min(2, { message: 'El nombre del cliente debe tener al menos 2 caracteres.' }),
-  phoneNumbers: z.array(z.object({ value: z.string().min(10, { message: 'El número de teléfono debe tener al menos 10 dígitos.' }) })).min(1, { message: 'Se requiere al menos un número de teléfono.' }),
+  phoneNumbers: z.array(z.object({ value: z.string().min(10, { message: 'El número de teléfono debe tener 10 dígitos.' }).max(10, { message: 'El número de teléfono debe tener 10 dígitos.' }) })).min(1, { message: 'Se requiere al menos un número de teléfono.' }),
   devices: z.array(deviceSchema).min(1, { message: 'Debes registrar al menos un dispositivo.' }),
 });
 
@@ -337,7 +337,7 @@ export function RepairRequestForm({
                       <FormField key={field.id} control={form.control} name={`phoneNumbers.${index}.value`} render={({ field }) => (
                           <FormItem className="mt-2"><FormControl>
                               <div className="flex items-center gap-2">
-                                  <Input placeholder="Ej: 555-123-4567" {...field} />
+                                  <Input type="tel" maxLength={10} placeholder="Ej: 5512345678" {...field} />
                                   <Button type="button" variant="ghost" size="icon" onClick={() => removePhone(index)} disabled={phoneFields.length <= 1}><Trash2 className="h-4 w-4" /></Button>
                               </div>
                           </FormControl><FormMessage /></FormItem>
