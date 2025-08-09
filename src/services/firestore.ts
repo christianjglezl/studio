@@ -25,14 +25,16 @@ export const getCollection = async <T extends { name?: string, text?: string }>(
     return data;
 };
 
-export const addItem = async <T extends Omit<CollectionType, 'id'>>(collectionName: CollectionName, item: T): Promise<string> => {
+export const addItem = async (collectionName: CollectionName, item: Omit<CollectionType, 'id'>): Promise<string> => {
+    // This is the correct implementation. The item is passed directly.
     const docRef = await addDoc(collection(db, collectionName), item);
     return docRef.id;
 };
 
-export const updateItem = async (collectionName: CollectionName, id: string, item: Partial<CollectionType>): Promise<void> => {
+export const updateItem = async (collectionName: CollectionName, id: string, item: Partial<Omit<CollectionType, 'id'>>): Promise<void> => {
     const docRef = doc(db, collectionName, id);
-    await updateDoc(docRef, { ...item });
+    // This is the correct implementation. The item is passed directly.
+    await updateDoc(docRef, item);
 };
 
 export const deleteItem = async (collectionName: CollectionName, id: string): Promise<void> => {
