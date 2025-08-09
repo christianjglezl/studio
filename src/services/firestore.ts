@@ -10,18 +10,15 @@ type CollectionName = 'brands' | 'models' | 'colors' | 'accessories' | 'conditio
 
 // Generic Functions
 export const getCollection = async <T extends { name?: string, text?: string }>(collectionName: CollectionName): Promise<T[]> => {
-    // This function previously had a bug where orderBy was causing queries to fail silently on collections without a matching index.
-    // The query is now simplified to fetch all documents, and sorting is handled on the client-side after data is received.
     const q = query(collection(db, collectionName));
     const querySnapshot = await getDocs(q);
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
 
-    // Sort data on the client side to avoid complex Firestore indexing.
     if (data.length > 0) {
-        if ('name' in data[0]!) {
-            data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        } else if ('text' in data[0]!) {
-            data.sort((a, b) => (a.text || '').localeCompare(b.text || ''));
+        if ('name' in data[0]! && data.every(item => typeof item.name === 'string')) {
+            data.sort((a, b) => (a.name!).localeCompare(b.name!));
+        } else if ('text' in data[0]! && data.every(item => typeof item.text === 'string')) {
+            data.sort((a, b) => (a.text!).localeCompare(b.text!));
         }
     }
     
@@ -29,17 +26,13 @@ export const getCollection = async <T extends { name?: string, text?: string }>(
 };
 
 export const addItem = async <T extends Omit<CollectionType, 'id'>>(collectionName: CollectionName, item: T): Promise<string> => {
-    // Corrected: The object was being wrapped in another object, e.g., `{...item}`.
-    // It should be passed directly to addDoc.
     const docRef = await addDoc(collection(db, collectionName), item);
     return docRef.id;
 };
 
 export const updateItem = async (collectionName: CollectionName, id: string, item: Partial<CollectionType>): Promise<void> => {
     const docRef = doc(db, collectionName, id);
-    // Corrected: The object was being wrapped in another object, e.g., `{...item}`.
-    // It should be passed directly to updateDoc.
-    await updateDoc(docRef, item);
+    await updateDoc(docRef, { ...item });
 };
 
 export const deleteItem = async (collectionName: CollectionName, id: string): Promise<void> => {
@@ -57,7 +50,6 @@ export const getRepairRequests = async (): Promise<RepairRequest[]> => {
         const devicesSnapshot = await getDocs(collection(db, `repairRequests/${doc.id}/devices`));
         const devices = devicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as DeviceInRequest));
         
-        // Ensure createdAt is handled correctly, even if it's not yet set on the server
         const createdAt = data.createdAt ? data.createdAt.toDate().toISOString() : new Date().toISOString();
 
         return { 
@@ -110,19 +102,15 @@ export const updateRepairRequestWithDevices = async (id: string, data: Omit<Repa
 
     const { devices, ...requestData } = data;
 
-    // Update main request document
     batch.update(requestRef, requestData);
 
-    // Update devices subcollection
     devices.forEach(device => {
         if (!device.id) {
             console.error("Device missing ID, cannot update:", device);
             return;
         }
-        // Correctly get the reference to the device document
         const deviceRef = doc(db, `repairRequests/${id}/devices`, device.id);
         
-        // Create a separate object for the update, excluding the 'id' field
         const { id: deviceId, ...deviceData } = device;
         batch.update(deviceRef, deviceData);
     });
