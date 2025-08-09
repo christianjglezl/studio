@@ -178,7 +178,7 @@ export default function Home() {
         <div className="w-full max-w-6xl space-y-8">
            <header className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <Image src="/logo.png" alt="Easy Tech Logo" width={40} height={40} />
+              <Image src="/logo.png" alt="Easy Tech Logo" width={40} height={40} unoptimized />
               <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
             </div>
             <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
@@ -208,7 +208,7 @@ export default function Home() {
         <div className="w-full max-w-6xl">
           <header className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <Image src="/logo.png" alt="Easy Tech Logo" width={40} height={40} />
+              <Image src="/logo.png" alt="Easy Tech Logo" width={40} height={40} unoptimized />
               <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
             </div>
             <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
