@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { HardDrive, Wrench, List } from 'lucide-react';
+import { HardDrive, Wrench, List, LogOut } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RepairRequestForm } from '@/components/repair-request-form';
@@ -14,11 +14,15 @@ import { getCollection, addItem, updateItem, deleteItem, addRepairRequest, getRe
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 
 const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/techcheck-x5724.firebasestorage.app/o/logoEasy.png?alt=media&token=0fbd7512-4ec8-4b6d-9191-4fad7f472c3e";
 
 
-export default function Home() {
+function AppScreen() {
+  const { signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
@@ -56,7 +60,6 @@ export default function Home() {
     }
   }, [toast]);
   
-  // Fetch all data from Firestore on initial load
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
@@ -179,7 +182,7 @@ export default function Home() {
     return (
       <div className="flex min-h-screen flex-col items-center p-4 sm:p-8 md:p-12">
         <div className="w-full max-w-6xl space-y-8">
-           <header className="mb-8">
+           <header className="mb-8 flex justify-between items-center">
             <div className="flex items-center gap-3 mb-2">
               <Image src={LOGO_URL} alt="Easy Tech Logo" width={50} height={50} unoptimized />
               <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
@@ -209,12 +212,18 @@ export default function Home() {
     <>
       <main className="flex min-h-screen flex-col items-center p-4 sm:p-8 md:p-12 print:hidden">
         <div className="w-full max-w-6xl">
-          <header className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-               <Image src={LOGO_URL} alt="Easy Tech Logo" width={50} height={50} unoptimized/>
-              <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
+          <header className="mb-8 flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                 <Image src={LOGO_URL} alt="Easy Tech Logo" width={50} height={50} unoptimized/>
+                <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
+              </div>
+              <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
             </div>
-            <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
+            <Button variant="ghost" onClick={signOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Cerrar Sesión
+            </Button>
           </header>
           
           <Tabs defaultValue="repair" className="w-full">
@@ -295,3 +304,30 @@ export default function Home() {
     </>
   );
 }
+
+
+export default function Home() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+        <div className="w-full max-w-6xl space-y-8 text-center">
+          <Skeleton className="h-12 w-1/2 mx-auto" />
+          <Skeleton className="h-8 w-3/4 mx-auto" />
+        </div>
+      </div>
+    );
+  }
+
+  return <AppScreen />;
+}
+
+    
