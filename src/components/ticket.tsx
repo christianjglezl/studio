@@ -73,7 +73,8 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
   return (
     <div className="p-1 font-mono" style={{ width: '58mm', fontSize: '8px', lineHeight: '1.4' }}>
       <div className="text-center">
-        <Image src={LOGO_URL} alt="Easy Tech Logo" width={60} height={60} unoptimized className="inline-block mb-1" />
+        {/* Using a standard <img> tag for better print compatibility */}
+        <img src={LOGO_URL} alt="Easy Tech Logo" style={{ width: '60px', height: '60px', display: 'inline-block', marginBottom: '4px' }} />
         <h1 className="text-lg font-bold">Easy Tech</h1>
         <p>Comprobante de Servicio</p>
       </div>
