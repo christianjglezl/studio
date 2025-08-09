@@ -72,7 +72,7 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
     <div className="p-1 font-mono" style={{ width: '58mm', fontSize: '8px', lineHeight: '1.4' }}>
       <div className="text-center">
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
-          <Image src="/logo.png" alt="Easy Tech Logo" width={40} height={40} unoptimized />
+          <Image src="/logo.png" alt="Easy Tech Logo" width={40} height={40} />
         </div>
         <h1 className="text-lg font-bold">Easy Tech</h1>
         <p>Comprobante de Servicio</p>
