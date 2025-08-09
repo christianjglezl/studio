@@ -19,9 +19,9 @@ export const getCollection = async <T extends { name?: string, text?: string }>(
     // Sort data on the client side to avoid complex Firestore indexing.
     if (data.length > 0) {
         if ('name' in data[0]!) {
-            data.sort((a, b) => a.name!.localeCompare(b.name!));
+            data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         } else if ('text' in data[0]!) {
-            data.sort((a, b) => a.text!.localeCompare(b.text!));
+            data.sort((a, b) => (a.text || '').localeCompare(b.text || ''));
         }
     }
     
@@ -29,27 +29,17 @@ export const getCollection = async <T extends { name?: string, text?: string }>(
 };
 
 export const addItem = async <T extends Omit<CollectionType, 'id'>>(collectionName: CollectionName, item: T): Promise<string> => {
-    // Firestore can sometimes reject writes if the object contains 'undefined' values.
-    // We clean the object to remove any keys with undefined values before sending.
-    const cleanItem: Partial<T> = {};
-    for (const key in item) {
-        if ((item as any)[key] !== undefined) {
-            (cleanItem as any)[key] = (item as any)[key];
-        }
-    }
-    const docRef = await addDoc(collection(db, collectionName), cleanItem);
+    // The object being sent to Firestore must be a plain object.
+    // Using spread syntax ensures we're sending a clean object copy.
+    const docRef = await addDoc(collection(db, collectionName), { ...item });
     return docRef.id;
 };
 
 export const updateItem = async (collectionName: CollectionName, id: string, item: Partial<CollectionType>): Promise<void> => {
     const docRef = doc(db, collectionName, id);
-    const cleanItem: Partial<CollectionType> = {};
-     for (const key in item) {
-        if ((item as any)[key] !== undefined) {
-            (cleanItem as any)[key] = (item as any)[key];
-        }
-    }
-    await updateDoc(docRef, cleanItem);
+    // The object being sent to Firestore must be a plain object.
+    const updateData = { ...item };
+    await updateDoc(docRef, updateData);
 };
 
 export const deleteItem = async (collectionName: CollectionName, id: string): Promise<void> => {
