@@ -12,6 +12,8 @@ interface TicketProps {
   catalog: CatalogData;
 }
 
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/techcheck-x5724.firebasestorage.app/o/ETlogo1_TodoAzul_peqe%C3%B1o_centrado.png?alt=media&token=25351f33-1a29-4592-88b0-4593c1268c78";
+
 const getEntityName = <T extends { id: string; name: string }>(id: string, entities: T[]): string => {
   return entities.find(e => e.id === id)?.name || 'N/A';
 };
@@ -72,7 +74,7 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
     <div className="p-1 font-mono" style={{ width: '58mm', fontSize: '8px', lineHeight: '1.4' }}>
       <div className="text-center">
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
-          <Image src="/logo.png?v=2" alt="Easy Tech Logo" width={40} height={40} unoptimized />
+          <Image src={LOGO_URL} alt="Easy Tech Logo" width={40} height={40} unoptimized />
         </div>
         <h1 className="text-lg font-bold">Easy Tech</h1>
         <p>Comprobante de Servicio</p>

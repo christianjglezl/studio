@@ -15,6 +15,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/techcheck-x5724.firebasestorage.app/o/ETlogo1_TodoAzul_peqe%C3%B1o_centrado.png?alt=media&token=25351f33-1a29-4592-88b0-4593c1268c78";
+
+
 export default function Home() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -178,7 +181,7 @@ export default function Home() {
         <div className="w-full max-w-6xl space-y-8">
            <header className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <Image src="/logo.png?v=2" alt="Easy Tech Logo" width={40} height={40} unoptimized />
+              <Image src={LOGO_URL} alt="Easy Tech Logo" width={40} height={40} unoptimized />
               <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
             </div>
             <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
@@ -208,7 +211,7 @@ export default function Home() {
         <div className="w-full max-w-6xl">
           <header className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <Image src="/logo.png?v=2" alt="Easy Tech Logo" width={40} height={40} unoptimized />
+               <Image src={LOGO_URL} alt="Easy Tech Logo" width={40} height={40} />
               <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
             </div>
             <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
