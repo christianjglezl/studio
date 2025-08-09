@@ -29,17 +29,17 @@ export const getCollection = async <T extends { name?: string, text?: string }>(
 };
 
 export const addItem = async <T extends Omit<CollectionType, 'id'>>(collectionName: CollectionName, item: T): Promise<string> => {
-    // The object being sent to Firestore must be a plain object.
-    // Using spread syntax ensures we're sending a clean object copy.
-    const docRef = await addDoc(collection(db, collectionName), { ...item });
+    // Corrected: The object was being wrapped in another object, e.g., `{...item}`.
+    // It should be passed directly to addDoc.
+    const docRef = await addDoc(collection(db, collectionName), item);
     return docRef.id;
 };
 
 export const updateItem = async (collectionName: CollectionName, id: string, item: Partial<CollectionType>): Promise<void> => {
     const docRef = doc(db, collectionName, id);
-    // The object being sent to Firestore must be a plain object.
-    const updateData = { ...item };
-    await updateDoc(docRef, updateData);
+    // Corrected: The object was being wrapped in another object, e.g., `{...item}`.
+    // It should be passed directly to updateDoc.
+    await updateDoc(docRef, item);
 };
 
 export const deleteItem = async (collectionName: CollectionName, id: string): Promise<void> => {
