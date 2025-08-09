@@ -5,7 +5,7 @@ import React, { useState, useMemo } from 'react';
 import type { RepairRequest, RepairStatus } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO } from 'date-fns';
 import { DollarSign, HardDrive, Wrench } from 'lucide-react';
@@ -73,15 +73,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests }) => {
                 statusCounts[req.status]++;
             }
         });
+        
+        const chartData = repairStatuses
+            .map(status => ({
+                name: status,
+                value: statusCounts[status],
+                fill: statusColors[status],
+            }))
+            .filter(item => item.value > 0);
 
-        const chartData = repairStatuses.map(status => ({
-            name: status,
-            'Dispositivos': statusCounts[status],
-            fill: statusColors[status],
-        }));
 
         return { totalRequests, totalIncome, totalDownPayments, chartData };
     }, [filteredRequests]);
+    
+    const RADIAN = Math.PI / 180;
+    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, ...props }: any) => {
+        if (percent === 0) return null;
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+        return (
+            <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12} fontWeight="bold">
+                {`${(percent * 100).toFixed(0)}%`}
+            </text>
+        );
+    };
+
 
     return (
         <div className="space-y-6">
@@ -137,21 +155,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests }) => {
                     <CardTitle className="font-headline">Estatus de Reparaciones</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={stats.chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} interval={0} stroke="#888888" fontSize={12} />
-                            <YAxis allowDecimals={false} stroke="#888888" fontSize={12} />
+                    <ResponsiveContainer width="100%" height={350}>
+                        <PieChart>
+                             <Pie
+                                data={stats.chartData}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={renderCustomizedLabel}
+                                outerRadius={120}
+                                dataKey="value"
+                                nameKey="name"
+                            >
+                                {stats.chartData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.fill} stroke={entry.fill} />
+                                ))}
+                            </Pie>
                             <Tooltip
                                 contentStyle={{
                                     backgroundColor: 'hsl(var(--background))',
                                     borderColor: 'hsl(var(--border))',
                                     borderRadius: 'var(--radius)',
                                 }}
-                                cursor={{ fill: 'hsl(var(--muted))' }}
                             />
-                            <Bar dataKey="Dispositivos" name="Dispositivos" barSize={40} />
-                        </BarChart>
+                            <Legend
+                                iconSize={10}
+                                layout="horizontal"
+                                verticalAlign="bottom"
+                                align="center"
+                            />
+                        </PieChart>
                     </ResponsiveContainer>
                 </CardContent>
             </Card>
