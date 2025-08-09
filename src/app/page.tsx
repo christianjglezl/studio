@@ -230,13 +230,13 @@ export default function Home() {
                           const id = await addItem(collectionName, item);
                           const fullItem = { ...item, id };
                           switch(collectionName) {
-                            case 'brands': setBrands(prev => [...prev, fullItem as Brand]); break;
-                            case 'models': setModels(prev => [...prev, fullItem as Model]); break;
-                            case 'colors': setColors(prev => [...prev, fullItem as Color]); break;
-                            case 'accessories': setAccessories(prev => [...prev, fullItem as Accessory]); break;
-                            case 'conditions': setConditions(prev => [...prev, fullItem as Condition]); break;
-                            case 'services': setServices(prev => [...prev, fullItem as Service]); break;
-                            case 'terms': setTerms(prev => [...prev, fullItem as TermAndCondition]); break;
+                            case 'brands': setBrands(prev => [...prev, fullItem as Brand].sort((a,b) => a.name.localeCompare(b.name))); break;
+                            case 'models': setModels(prev => [...prev, fullItem as Model].sort((a,b) => a.name.localeCompare(b.name))); break;
+                            case 'colors': setColors(prev => [...prev, fullItem as Color].sort((a,b) => a.name.localeCompare(b.name))); break;
+                            case 'accessories': setAccessories(prev => [...prev, fullItem as Accessory].sort((a,b) => a.name.localeCompare(b.name))); break;
+                            case 'conditions': setConditions(prev => [...prev, fullItem as Condition].sort((a,b) => a.name.localeCompare(b.name))); break;
+                            case 'services': setServices(prev => [...prev, fullItem as Service].sort((a,b) => a.name.localeCompare(b.name))); break;
+                            case 'terms': setTerms(prev => [...prev, fullItem as TermAndCondition].sort((a,b) => a.text.localeCompare(b.text))); break;
                           }
                           toast({ title: "Agregado", description: "El elemento se ha añadido al catálogo.", variant: "success" });
                       } catch (error) {
@@ -248,13 +248,13 @@ export default function Home() {
                       try {
                         await updateItem(collectionName, id, item);
                         switch(collectionName) {
-                          case 'brands': setBrands(prev => prev.map(i => i.id === id ? {...i, ...item} as Brand : i)); break;
-                          case 'models': setModels(prev => prev.map(i => i.id === id ? {...i, ...item} as Model : i)); break;
-                          case 'colors': setColors(prev => prev.map(i => i.id === id ? {...i, ...item} as Color : i)); break;
-                          case 'accessories': setAccessories(prev => prev.map(i => i.id === id ? {...i, ...item} as Accessory : i)); break;
-                          case 'conditions': setConditions(prev => prev.map(i => i.id === id ? {...i, ...item} as Condition : i)); break;
-                          case 'services': setServices(prev => prev.map(i => i.id === id ? {...i, ...item} as Service : i)); break;
-                          case 'terms': setTerms(prev => prev.map(i => i.id === id ? {...i, ...item} as TermAndCondition : i)); break;
+                          case 'brands': setBrands(prev => prev.map(i => i.id === id ? {...i, ...item} as Brand : i).sort((a,b) => a.name.localeCompare(b.name))); break;
+                          case 'models': setModels(prev => prev.map(i => i.id === id ? {...i, ...item} as Model : i).sort((a,b) => a.name.localeCompare(b.name))); break;
+                          case 'colors': setColors(prev => prev.map(i => i.id === id ? {...i, ...item} as Color : i).sort((a,b) => a.name.localeCompare(b.name))); break;
+                          case 'accessories': setAccessories(prev => prev.map(i => i.id === id ? {...i, ...item} as Accessory : i).sort((a,b) => a.name.localeCompare(b.name))); break;
+                          case 'conditions': setConditions(prev => prev.map(i => i.id === id ? {...i, ...item} as Condition : i).sort((a,b) => a.name.localeCompare(b.name))); break;
+                          case 'services': setServices(prev => prev.map(i => i.id === id ? {...i, ...item} as Service : i).sort((a,b) => a.name.localeCompare(b.name))); break;
+                          case 'terms': setTerms(prev => prev.map(i => i.id === id ? {...i, ...item} as TermAndCondition : i).sort((a,b) => a.text.localeCompare(b.text))); break;
                         }
                         toast({ title: "Actualizado", description: "El elemento del catálogo se ha actualizado.", variant: "success" });
                       } catch (error) {

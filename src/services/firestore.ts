@@ -10,26 +10,46 @@ type CollectionName = 'brands' | 'models' | 'colors' | 'accessories' | 'conditio
 
 // Generic Functions
 export const getCollection = async <T extends { name?: string, text?: string }>(collectionName: CollectionName): Promise<T[]> => {
-    // Adding a specific orderBy clause is crucial for Firestore to handle the query predictably,
-    // especially in apps with real-time updates, preventing race conditions or malformed queries
-    // that can lead to 400 Bad Request errors on subsequent write operations.
-    const isTerms = collectionName === 'terms';
-    const q = query(collection(db, collectionName), orderBy(isTerms ? "text" : "name"));
-    
+    // This function previously had a bug where orderBy was causing queries to fail silently on collections without a matching index.
+    // The query is now simplified to fetch all documents, and sorting is handled on the client-side after data is received.
+    const q = query(collection(db, collectionName));
     const querySnapshot = await getDocs(q);
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+
+    // Sort data on the client side to avoid complex Firestore indexing.
+    if (data.length > 0) {
+        if ('name' in data[0]!) {
+            data.sort((a, b) => a.name!.localeCompare(b.name!));
+        } else if ('text' in data[0]!) {
+            data.sort((a, b) => a.text!.localeCompare(b.text!));
+        }
+    }
     
     return data;
 };
 
 export const addItem = async <T extends Omit<CollectionType, 'id'>>(collectionName: CollectionName, item: T): Promise<string> => {
-    const docRef = await addDoc(collection(db, collectionName), item);
+    // Firestore can sometimes reject writes if the object contains 'undefined' values.
+    // We clean the object to remove any keys with undefined values before sending.
+    const cleanItem: Partial<T> = {};
+    for (const key in item) {
+        if ((item as any)[key] !== undefined) {
+            (cleanItem as any)[key] = (item as any)[key];
+        }
+    }
+    const docRef = await addDoc(collection(db, collectionName), cleanItem);
     return docRef.id;
 };
 
 export const updateItem = async (collectionName: CollectionName, id: string, item: Partial<CollectionType>): Promise<void> => {
     const docRef = doc(db, collectionName, id);
-    await updateDoc(docRef, item);
+    const cleanItem: Partial<CollectionType> = {};
+     for (const key in item) {
+        if ((item as any)[key] !== undefined) {
+            (cleanItem as any)[key] = (item as any)[key];
+        }
+    }
+    await updateDoc(docRef, cleanItem);
 };
 
 export const deleteItem = async (collectionName: CollectionName, id: string): Promise<void> => {
