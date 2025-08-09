@@ -15,11 +15,9 @@ import { Textarea } from './ui/textarea';
 
 interface CatalogManagerProps {
     catalog: CatalogData;
-    onAddItem: (collectionName: keyof Omit<CatalogData, 'terms'>, item: { name: string, brandId?: string }) => Promise<void>;
-    onUpdateItem: (collectionName: keyof Omit<CatalogData, 'terms'>, id: string, item: { name: string, brandId?: string }) => Promise<void>;
+    onAddItem: (collectionName: keyof CatalogData, item: any) => Promise<void>;
+    onUpdateItem: (collectionName: keyof CatalogData, id: string, item: any) => Promise<void>;
     onDeleteItem: (collectionName: keyof CatalogData, id: string) => Promise<void>;
-    onAddTerm: (item: { text: string }) => Promise<void>;
-    onUpdateTerm: (id: string, item: { text: string }) => Promise<void>;
 }
 
 const NameBasedFormDialog: React.FC<{
@@ -203,7 +201,7 @@ const TermFormDialog: React.FC<{
 
 
 export function CatalogManager({
-  catalog, onAddItem, onUpdateItem, onDeleteItem, onAddTerm, onUpdateTerm
+  catalog, onAddItem, onUpdateItem, onDeleteItem
 }: CatalogManagerProps) {
 
   return (
@@ -415,7 +413,7 @@ export function CatalogManager({
       <TabsContent value="terms" className="mt-4">
         <div className="flex justify-end mb-4">
             <TermFormDialog 
-                onSave={onAddTerm} 
+                onSave={(data) => onAddItem('terms', data)} 
                 dialogTitle="Añadir Nuevo Término" 
             />
         </div>
@@ -429,7 +427,7 @@ export function CatalogManager({
                             <TableCell className="text-right">
                                 <TermFormDialog 
                                     itemToEdit={item} 
-                                    onSave={(data) => onUpdateTerm(item.id, data)} 
+                                    onSave={(data) => onUpdateItem('terms', item.id, data)} 
                                     dialogTitle="Editar Término" 
                                 />
                                 <Button variant="ghost" size="icon" onClick={() => onDeleteItem('terms', item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
@@ -443,3 +441,4 @@ export function CatalogManager({
     </Tabs>
   );
 }
+

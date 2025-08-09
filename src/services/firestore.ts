@@ -1,25 +1,23 @@
 
-
-
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, writeBatch, serverTimestamp, getDoc, runTransaction } from 'firebase/firestore';
-import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition, RepairRequest, DeviceInRequest } from '@/lib/types';
+import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition, RepairRequest, DeviceInRequest, CatalogData } from '@/lib/types';
 
 type CollectionType = Brand | Model | Color | Accessory | Condition | Service | TermAndCondition;
-type CollectionName = 'brands' | 'models' | 'colors' | 'accessories' | 'conditions' | 'services' | 'terms';
+type CollectionName = keyof Omit<CatalogData, 'terms'>;
 
 
 // Generic Functions
-export const getCollection = async <T extends { name?: string, text?: string }>(collectionName: CollectionName): Promise<T[]> => {
+export const getCollection = async <T extends { name?: string, text?: string }>(collectionName: keyof CatalogData): Promise<T[]> => {
     const q = query(collection(db, collectionName));
     const querySnapshot = await getDocs(q);
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
 
     // Client-side sorting
     if (data.length > 0) {
-        if ('name' in data[0]! && data.every(item => typeof item.name === 'string')) {
+        if (data.every(item => typeof item.name === 'string')) {
             data.sort((a, b) => (a.name!).localeCompare(b.name!));
-        } else if ('text' in data[0]! && data.every(item => typeof item.text === 'string')) {
+        } else if (data.every(item => typeof item.text === 'string')) {
             data.sort((a, b) => (a.text!).localeCompare(b.text!));
         }
     }
@@ -27,19 +25,19 @@ export const getCollection = async <T extends { name?: string, text?: string }>(
     return data;
 };
 
-export const addItem = async (collectionName: CollectionName, item: Omit<CollectionType, 'id'>): Promise<string> => {
-    // The item is passed directly. This is the correct implementation.
+export const addItem = async (collectionName: keyof CatalogData, item: Omit<CollectionType, 'id'>): Promise<string> => {
+    // This is the final, corrected implementation. It sends the item object directly.
     const docRef = await addDoc(collection(db, collectionName), item);
     return docRef.id;
 };
 
-export const updateItem = async (collectionName: CollectionName, id: string, item: Partial<Omit<CollectionType, 'id'>>): Promise<void> => {
+export const updateItem = async (collectionName: keyof CatalogData, id: string, item: Partial<Omit<CollectionType, 'id'>>): Promise<void> => {
     const docRef = doc(db, collectionName, id);
-    // The item is passed directly. This is the correct implementation.
+    // This is the final, corrected implementation. It sends the item object directly.
     await updateDoc(docRef, item);
 };
 
-export const deleteItem = async (collectionName: CollectionName, id: string): Promise<void> => {
+export const deleteItem = async (collectionName: keyof CatalogData, id: string): Promise<void> => {
     const docRef = doc(db, collectionName, id);
     await deleteDoc(docRef);
 };
