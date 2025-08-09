@@ -21,6 +21,8 @@ import { ChevronDown, Pencil, Printer, Smartphone } from 'lucide-react';
 import { RepairRequestForm } from './repair-request-form';
 import { updateRepairRequest } from '@/services/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { Dashboard } from './dashboard';
+import { Separator } from './ui/separator';
 
 interface RepairListProps {
   requests: RepairRequest[];
@@ -219,65 +221,69 @@ export function RepairList({
 
 
   return (
-    <div className="rounded-md border">
-      <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Solicitud de Reparación (Folio: {String(editingRequest?.folio).padStart(4, '0')})</DialogTitle>
-          </DialogHeader>
-          <RepairRequestForm
-              brands={catalog.brands}
-              models={catalog.models}
-              setModels={setModels}
-              colors={catalog.colors}
-              accessories={catalog.accessories}
-              conditions={catalog.conditions}
-              services={catalog.services}
-              onAddRequest={() => {}} // Not used in edit mode
-              onUpdateRequest={onUpdateRequest}
-              initialData={editingRequest}
-              onFormClose={() => setEditingRequest(null)}
-          />
-        </DialogContent>
-      </Dialog>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12"></TableHead>
-            <TableHead>Folio</TableHead>
-            <TableHead>Cliente</TableHead>
-            <TableHead>Teléfono</TableHead>
-            <TableHead>Dispositivo(s)</TableHead>
-            <TableHead>Fecha de Ingreso</TableHead>
-            <TableHead>Estatus</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        
-        <TableBody>
-            {allDevices.length > 0 ? (
-              allDevices.map(({ request, device, deviceIndex, totalDevices }) => (
-                <RepairRow 
-                  key={device.id}
-                  request={request}
-                  device={device}
-                  deviceIndex={deviceIndex}
-                  totalDevices={totalDevices}
-                  catalog={catalog}
-                  onStatusChange={handleStatusChange}
-                  onEdit={handleEdit}
-                  onPrint={onPrintRequest}
-                />
-              ))
-            ) : (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
-                    No hay solicitudes de reparación registradas.
-                  </TableCell>
-                </TableRow>
-            )}
-        </TableBody>
-      </Table>
+    <div className="space-y-6">
+      <Dashboard requests={requests} />
+      <Separator />
+      <div className="rounded-md border">
+        <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Editar Solicitud de Reparación (Folio: {String(editingRequest?.folio).padStart(4, '0')})</DialogTitle>
+            </DialogHeader>
+            <RepairRequestForm
+                brands={catalog.brands}
+                models={catalog.models}
+                setModels={setModels}
+                colors={catalog.colors}
+                accessories={catalog.accessories}
+                conditions={catalog.conditions}
+                services={catalog.services}
+                onAddRequest={() => {}} // Not used in edit mode
+                onUpdateRequest={onUpdateRequest}
+                initialData={editingRequest}
+                onFormClose={() => setEditingRequest(null)}
+            />
+          </DialogContent>
+        </Dialog>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12"></TableHead>
+              <TableHead>Folio</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Teléfono</TableHead>
+              <TableHead>Dispositivo(s)</TableHead>
+              <TableHead>Fecha de Ingreso</TableHead>
+              <TableHead>Estatus</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          
+          <TableBody>
+              {allDevices.length > 0 ? (
+                allDevices.map(({ request, device, deviceIndex, totalDevices }) => (
+                  <RepairRow 
+                    key={device.id}
+                    request={request}
+                    device={device}
+                    deviceIndex={deviceIndex}
+                    totalDevices={totalDevices}
+                    catalog={catalog}
+                    onStatusChange={handleStatusChange}
+                    onEdit={handleEdit}
+                    onPrint={onPrintRequest}
+                  />
+                ))
+              ) : (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
+                      No hay solicitudes de reparación registradas.
+                    </TableCell>
+                  </TableRow>
+              )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
