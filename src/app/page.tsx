@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { HardDrive, Wrench, Smartphone, List } from 'lucide-react';
+import { HardDrive, Wrench, List } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RepairRequestForm } from '@/components/repair-request-form';
@@ -13,6 +13,7 @@ import { Ticket } from '@/components/ticket';
 import { getCollection, addItem, updateItem, deleteItem, addRepairRequest, getRepairRequests, updateRepairRequest, updateRepairRequestWithDevices } from '@/services/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
@@ -121,7 +122,7 @@ export default function Home() {
       }
   }
 
-  const handleAddItem = useCallback(async (collectionName: keyof CatalogData, item: any) => {
+  const handleAddItem = async (collectionName: keyof CatalogData, item: any) => {
     try {
       const id = await addItem(collectionName, item);
       const newItem = { ...item, id };
@@ -136,9 +137,9 @@ export default function Home() {
       console.error("Error adding item:", error);
       toast({ title: "Error al Guardar", description: `No se pudo añadir el elemento: ${error.message}`, variant: "destructive" });
     }
-  }, [toast]);
+  };
   
-  const handleUpdateItem = useCallback(async (collectionName: keyof CatalogData, id: string, item: any) => {
+  const handleUpdateItem = async (collectionName: keyof CatalogData, id: string, item: any) => {
     try {
       await updateItem(collectionName, id, item);
       
@@ -152,9 +153,9 @@ export default function Home() {
       console.error("Error updating item:", error);
       toast({ title: "Error al Actualizar", description: `No se pudo actualizar el elemento: ${error.message}`, variant: "destructive" });
     }
-  }, [toast]);
+  };
 
-  const handleDeleteItem = useCallback(async (collectionName: keyof CatalogData, id: string) => {
+  const handleDeleteItem = async (collectionName: keyof CatalogData, id: string) => {
     try {
       await deleteItem(collectionName, id);
 
@@ -168,7 +169,7 @@ export default function Home() {
       console.error("Error deleting item:", error);
       toast({ title: "Error al Eliminar", description: `No se pudo eliminar el elemento: ${error.message}`, variant: "destructive" });
     }
-  }, [toast]);
+  };
 
 
   if (loading) {
@@ -177,7 +178,7 @@ export default function Home() {
         <div className="w-full max-w-6xl space-y-8">
            <header className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <Smartphone className="w-8 h-8 text-primary" />
+              <Image src="/logo.png" alt="Easy Tech Logo" width={40} height={40} />
               <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
             </div>
             <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
@@ -207,7 +208,7 @@ export default function Home() {
         <div className="w-full max-w-6xl">
           <header className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <Smartphone className="w-8 h-8 text-primary" />
+              <Image src="/logo.png" alt="Easy Tech Logo" width={40} height={40} />
               <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
             </div>
             <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
