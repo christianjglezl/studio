@@ -70,7 +70,7 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
   const showTotals = request.devices.length > 1;
 
   return (
-    <div className="p-1 font-mono" style={{ width: '58mm', fontSize: '12px', lineHeight: '1.5' }}>
+    <div className="p-1 font-mono" style={{ width: '58mm', fontSize: '12px', lineHeight: '1.5', paddingBottom: '20px' }}>
        <style type="text/css" media="print">
         {`
           @page { size: 58mm auto; margin: 0; }
