@@ -5,7 +5,6 @@ import React from 'react';
 import type { RepairRequest, CatalogData, DeviceInRequest } from '@/lib/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import Image from 'next/image';
 
 interface TicketProps {
   request: RepairRequest;
@@ -29,14 +28,14 @@ const DeviceTicketSection = ({ device, catalog, index, totalDevices }: { device:
 
   return (
     <div className='py-2'>
-      <h2 className="text-center font-bold">Dispositivo #{index + 1} de {totalDevices}</h2>
+      <h2 className="text-center font-bold text-base">Dispositivo #{index + 1} de {totalDevices}</h2>
       <p><strong>Modelo:</strong> {getEntityName(device.brandId, brands)} {getEntityName(device.modelId, models)}</p>
       <p><strong>Color:</strong> {getEntityName(device.colorId, colors)}</p>
       <p><strong>IMEI:</strong> {device.imei || 'No provisto'}</p>
       
       <hr className="my-1 border-dashed border-black" />
 
-      <h3 className="text-center font-bold text-xs">Detalles del Servicio</h3>
+      <h3 className="text-center font-bold">Detalles del Servicio</h3>
       <p><strong>Falla Reportada:</strong> {device.problem || 'No especificado'}</p>
       <p><strong>Servicios a Realizar:</strong> {getEntityNames(device.serviceIds, services)}</p>
       <p><strong>Condiciones:</strong> {getEntityNames(device.conditions, conditions)}</p>
@@ -45,7 +44,7 @@ const DeviceTicketSection = ({ device, catalog, index, totalDevices }: { device:
       
       <hr className="my-1 border-dashed border-black" />
 
-      <h3 className="text-center font-bold text-xs">Cotización (Dispositivo)</h3>
+      <h3 className="text-center font-bold">Cotización (Dispositivo)</h3>
       <div className="flex justify-between">
         <span>Cotización:</span>
         <span>${device.quote?.toFixed(2) || '0.00'}</span>
@@ -71,11 +70,17 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
   const showTotals = request.devices.length > 1;
 
   return (
-    <div className="p-1 font-mono" style={{ width: '58mm', fontSize: '8px', lineHeight: '1.4' }}>
+    <div className="p-1 font-mono" style={{ width: '58mm', fontSize: '12px', lineHeight: '1.5' }}>
+       <style type="text/css" media="print">
+        {`
+          @page { size: 58mm auto; margin: 0; }
+          body { margin: 0; }
+        `}
+      </style>
       <div className="text-center">
         {/* Using a standard <img> tag for better print compatibility */}
         <img src={LOGO_URL} alt="Easy Tech Logo" style={{ width: '60px', height: '60px', display: 'inline-block', marginBottom: '4px' }} />
-        <h1 className="text-lg font-bold">Easy Tech</h1>
+        <h1 className="text-xl font-bold">Easy Tech</h1>
         <p>Comprobante de Servicio</p>
       </div>
 
@@ -104,16 +109,16 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
       {showTotals && (
         <>
           <hr className="my-2 border-solid border-black" />
-          <h2 className="text-center font-bold">Totales Globales</h2>
-          <div className="flex justify-between text-xs">
+          <h2 className="text-center font-bold text-lg">Totales Globales</h2>
+          <div className="flex justify-between text-sm">
             <span>Cotización Total:</span>
             <span>${totalQuote.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-xs">
+          <div className="flex justify-between text-sm">
             <span>Anticipo Total:</span>
             <span>${totalDownPayment.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between font-bold text-lg">
+          <div className="flex justify-between font-bold text-xl">
             <span>Restante Total:</span>
             <span>${totalRemaining.toFixed(2)}</span>
           </div>
