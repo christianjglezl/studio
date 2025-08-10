@@ -83,6 +83,7 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
         <h1 className="text-xl font-bold">Easy Tech</h1>
         <p>Comprobante de Servicio</p>
         <p>Tel: 4921951949</p>
+        <p>Dirección: Jose Reyes 302 Ote. Col. Centro</p>
       </div>
 
       <hr className="my-2 border-dashed border-black" />
