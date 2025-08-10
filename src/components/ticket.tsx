@@ -82,7 +82,7 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
         <img src={LOGO_URL} alt="Easy Tech Logo" style={{ width: '60px', height: '60px', display: 'inline-block', marginBottom: '4px' }} />
         <h1 className="text-xl font-bold">Easy Tech</h1>
         <p>Comprobante de Servicio</p>
-        <p>Tel: 4922153353</p>
+        <p>Tel: 4921951949</p>
       </div>
 
       <hr className="my-2 border-dashed border-black" />
