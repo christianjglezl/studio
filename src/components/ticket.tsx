@@ -70,7 +70,7 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
   const showTotals = request.devices.length > 1;
 
   return (
-    <div className="p-1 font-mono" style={{ width: '58mm', fontSize: '12px', lineHeight: '1.5', paddingBottom: '20px' }}>
+    <div className="p-1 font-mono" style={{ width: '58mm', fontSize: '12px', lineHeight: '1.5' }}>
        <style type="text/css" media="print">
         {`
           @page { size: 58mm auto; margin: 0; }
@@ -137,6 +137,11 @@ export const Ticket = ({ request, catalog }: TicketProps) => {
       <div className="mt-4 text-center">
         <p>¡Gracias por su preferencia!</p>
       </div>
+
+      <hr className="my-2 border-dashed border-black" />
+      
+      {/* This empty div will force the printer to feed some blank paper */}
+      <div style={{ height: '20px' }}></div>
     </div>
   );
 };
