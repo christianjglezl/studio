@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { RepairRequest, RepairStatus, Model, CatalogData, DeviceInRequest } from '@/lib/types';
+import type { RepairRequest, RepairStatus, CatalogData, DeviceInRequest } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -28,7 +28,7 @@ interface RepairListProps {
   requests: RepairRequest[];
   setRequests: React.Dispatch<React.SetStateAction<RepairRequest[]>>;
   catalog: CatalogData;
-  setModels: React.Dispatch<React.SetStateAction<Model[]>>;
+  updateCatalogState: (collectionName: keyof CatalogData, newItems: any[]) => void;
   onPrintRequest: (request: RepairRequest) => void;
   onUpdateRequest: (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => Promise<void>;
 }
@@ -179,7 +179,7 @@ const RepairRow = ({
 
 
 export function RepairList({ 
-  requests, setRequests, catalog, setModels, onPrintRequest, onUpdateRequest
+  requests, setRequests, catalog, updateCatalogState, onPrintRequest, onUpdateRequest
 }: RepairListProps) {
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
   const { toast } = useToast();
@@ -212,7 +212,7 @@ export function RepairList({
   }
   
   const allDevices = requests.flatMap(req => 
-      req.devices.map((dev, index) => ({
+      (req.devices || []).map((dev, index) => ({
           request: req,
           device: dev,
           deviceIndex: index,
@@ -230,13 +230,8 @@ export function RepairList({
               <DialogTitle>Editar Solicitud de Reparación (Folio: {String(editingRequest?.folio).padStart(4, '0')})</DialogTitle>
             </DialogHeader>
             <RepairRequestForm
-                brands={catalog.brands}
-                models={catalog.models}
-                setModels={setModels}
-                colors={catalog.colors}
-                accessories={catalog.accessories}
-                conditions={catalog.conditions}
-                services={catalog.services}
+                catalog={catalog}
+                updateCatalogState={updateCatalogState}
                 onAddRequest={() => {}} // Not used in edit mode
                 onUpdateRequest={onUpdateRequest}
                 initialData={editingRequest}
@@ -262,7 +257,7 @@ export function RepairList({
               {allDevices.length > 0 ? (
                 allDevices.map(({ request, device, deviceIndex, totalDevices }) => (
                   <RepairRow 
-                    key={device.id}
+                    key={device.id || `${request.id}-${deviceIndex}`}
                     request={request}
                     device={device}
                     deviceIndex={deviceIndex}

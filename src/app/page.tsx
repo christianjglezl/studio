@@ -129,16 +129,20 @@ function AppScreen() {
           toast({ title: "Error", description: `No se pudo actualizar la solicitud: ${error.message}`, variant: "destructive" });
       }
   }
+  
+  const updateCatalogState = (collectionName: keyof CatalogData, newItems: any[]) => {
+    setCatalog(prev => ({
+        ...prev,
+        [collectionName]: newItems.sort((a: any, b: any) => (a.name || a.text).localeCompare(b.name || b.text)),
+    }));
+  };
 
   const handleAddItem = async (collectionName: keyof CatalogData, item: any) => {
     try {
       const id = await addItem(collectionName, item);
       const newItem = { ...item, id };
       
-      setCatalog(prevCatalog => ({
-        ...prevCatalog,
-        [collectionName]: [...prevCatalog[collectionName], newItem].sort((a: any, b: any) => (a.name || a.text).localeCompare(b.name || b.text))
-      }));
+      updateCatalogState(collectionName, [...catalog[collectionName], newItem]);
 
       toast({ title: "Agregado", description: "El elemento se ha añadido al catálogo.", variant: "success" });
     } catch (error: any) {
@@ -151,10 +155,8 @@ function AppScreen() {
     try {
       await updateItem(collectionName, id, item);
       
-      setCatalog(prevCatalog => ({
-        ...prevCatalog,
-        [collectionName]: prevCatalog[collectionName].map((i: any) => i.id === id ? { ...i, ...item } : i).sort((a: any, b: any) => (a.name || a.text).localeCompare(b.name || b.text))
-      }));
+      const updatedItems = catalog[collectionName].map((i: any) => i.id === id ? { ...i, ...item } : i)
+      updateCatalogState(collectionName, updatedItems);
 
       toast({ title: "Actualizado", description: "El elemento del catálogo se ha actualizado.", variant: "success" });
     } catch (error: any) {
@@ -167,10 +169,8 @@ function AppScreen() {
     try {
       await deleteItem(collectionName, id);
 
-      setCatalog(prevCatalog => ({
-          ...prevCatalog,
-          [collectionName]: prevCatalog[collectionName].filter((i: any) => i.id !== id)
-      }));
+      const filteredItems = catalog[collectionName].filter((i: any) => i.id !== id);
+      updateCatalogState(collectionName, filteredItems);
 
       toast({ title: "Eliminado", description: "El elemento del catálogo ha sido eliminado.", variant: "success" });
     } catch (error: any) {
@@ -255,13 +255,8 @@ function AppScreen() {
                 </CardHeader>
                 <CardContent>
                   <RepairRequestForm 
-                    brands={catalog.brands}
-                    models={catalog.models || []}
-                    setModels={(models) => setCatalog(prev => ({...prev, models}))}
-                    colors={catalog.colors}
-                    accessories={catalog.accessories}
-                    conditions={catalog.conditions}
-                    services={catalog.services}
+                    catalog={catalog}
+                    updateCatalogState={updateCatalogState}
                     onAddRequest={handleAddRepairRequest}
                   />
                 </CardContent>
@@ -278,7 +273,7 @@ function AppScreen() {
                     requests={repairRequests} 
                     setRequests={setRepairRequests}
                     catalog={catalog}
-                    setModels={(models) => setCatalog(prev => ({...prev, models}))}
+                    updateCatalogState={updateCatalogState}
                     onPrintRequest={handlePrint}
                     onUpdateRequest={handleUpdateRepairRequest}
                   />

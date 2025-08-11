@@ -32,7 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { PatternLock } from '@/components/pattern-lock';
-import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, DeviceInRequest } from '@/lib/types';
+import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, DeviceInRequest, CatalogData } from '@/lib/types';
 import { useEffect, useState, useMemo } from 'react';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -91,13 +91,8 @@ const formSchema = z.object({
 export type RepairRequestFormValues = z.infer<typeof formSchema>;
 
 interface RepairRequestFormProps {
-  brands: Brand[];
-  models: Model[];
-  setModels: React.Dispatch<React.SetStateAction<Model[]>>;
-  colors: Color[];
-  accessories: Accessory[];
-  conditions: Condition[];
-  services: Service[];
+  catalog: CatalogData;
+  updateCatalogState: (collectionName: keyof CatalogData, newItems: any[]) => void;
   onAddRequest: (data: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => void;
   onUpdateRequest?: (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => void;
   initialData?: RepairRequest | null;
@@ -152,9 +147,10 @@ const newDeviceDefault: Omit<DeviceInRequest, 'id'> = {
 };
 
 export function RepairRequestForm({ 
-  brands, models, setModels, colors, accessories, conditions, services,
+  catalog, updateCatalogState,
   onAddRequest, onUpdateRequest, initialData = null, onFormClose
 }: RepairRequestFormProps) {
+  const { brands, models, colors, accessories, conditions, services } = catalog;
   const { toast } = useToast();
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [addingModel, setAddingModel] = useState<{ open: boolean, index: number, brandId: string }>({ open: false, index: -1, brandId: '' });
@@ -267,7 +263,7 @@ export function RepairRequestForm({
         const newModelData = { name, brandId };
         const newId = await addItem('models', newModelData);
         const newModel: Model = { id: newId, ...newModelData };
-        setModels(prev => [...prev, newModel].sort((a,b) => a.name.localeCompare(b.name)));
+        updateCatalogState('models', [...models, newModel]);
         form.setValue(`devices.${addingModel.index}.modelId`, newModel.id);
         setAddingModel({ open: false, index: -1, brandId: '' });
     }
@@ -357,7 +353,7 @@ export function RepairRequestForm({
              const filteredModels = useMemo(() => {
                 if (!selectedBrandId) return [];
                 return safeModels.filter(m => m.brandId === selectedBrandId);
-             }, [selectedBrandId, models]);
+             }, [selectedBrandId, safeModels]);
              const quoteValue = watchedDevices[index]?.quote || 0;
              const downPaymentValue = watchedDevices[index]?.downPayment || 0;
              const remainingValue = quoteValue - downPaymentValue;
@@ -637,3 +633,5 @@ export function RepairRequestForm({
     </Dialog>
   );
 }
+
+    
