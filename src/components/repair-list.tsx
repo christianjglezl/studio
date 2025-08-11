@@ -44,6 +44,7 @@ const statusColors: { [key in RepairStatus]: string } = {
 };
 
 const getEntityName = <T extends { id: string; name: string }>(id: string, entities: T[]): string => {
+  if (!Array.isArray(entities)) return 'N/A'; // Safeguard
   return entities.find(e => e.id === id)?.name || 'N/A';
 };
 
@@ -285,3 +286,5 @@ export function RepairList({
     </div>
   );
 }
+
+    
