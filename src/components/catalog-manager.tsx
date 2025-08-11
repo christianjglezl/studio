@@ -203,6 +203,8 @@ const TermFormDialog: React.FC<{
 export function CatalogManager({
   catalog, onAddItem, onUpdateItem, onDeleteItem
 }: CatalogManagerProps) {
+  
+  const safeModels = Array.isArray(catalog.models) ? catalog.models : [];
 
   return (
     <Tabs defaultValue="brands" className="w-full">
@@ -261,7 +263,7 @@ export function CatalogManager({
             <Table>
                 <TableHeader className="sticky top-0 bg-secondary"><TableRow><TableHead>Nombre</TableHead><TableHead>Marca</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
                 <TableBody>
-                    {catalog.models.map(item => (
+                    {safeModels.map(item => (
                         <TableRow key={item.id}>
                             <TableCell>{item.name}</TableCell>
                             <TableCell>{catalog.brands.find(b => b.id === item.brandId)?.name || 'N/A'}</TableCell>
