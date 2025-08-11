@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { HardDrive, Wrench, List, LogOut } from 'lucide-react';
+import { HardDrive, Wrench, List, LogOut, LineChart } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RepairRequestForm } from '@/components/repair-request-form';
@@ -17,6 +17,8 @@ import Image from 'next/image';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Dashboard } from '@/components/dashboard';
+
 
 const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/techcheck-x5724.firebasestorage.app/o/logoEasy.png?alt=media&token=0fbd7512-4ec8-4b6d-9191-4fad7f472c3e";
 
@@ -227,7 +229,7 @@ function AppScreen() {
           </header>
           
           <Tabs defaultValue="repair" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="repair">
                 <Wrench className="mr-2 h-4 w-4" />
                 Nueva Solicitud de Reparación
@@ -235,6 +237,10 @@ function AppScreen() {
               <TabsTrigger value="list">
                 <List className="mr-2 h-4 w-4" />
                 Lista de Reparaciones
+              </TabsTrigger>
+              <TabsTrigger value="dashboard">
+                  <LineChart className="mr-2 h-4 w-4" />
+                  Dashboard
               </TabsTrigger>
               <TabsTrigger value="catalog">
                 <HardDrive className="mr-2 h-4 w-4" />
@@ -250,7 +256,7 @@ function AppScreen() {
                 <CardContent>
                   <RepairRequestForm 
                     brands={catalog.brands}
-                    models={catalog.models}
+                    models={catalog.models || []}
                     setModels={(models) => setCatalog(prev => ({...prev, models}))}
                     colors={catalog.colors}
                     accessories={catalog.accessories}
@@ -278,6 +284,9 @@ function AppScreen() {
                   />
                 </CardContent>
               </Card>
+            </TabsContent>
+            <TabsContent value="dashboard">
+                <Dashboard requests={repairRequests} />
             </TabsContent>
             <TabsContent value="catalog">
               <Card>

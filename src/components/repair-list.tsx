@@ -22,7 +22,6 @@ import { ChevronDown, Pencil, Printer, Smartphone } from 'lucide-react';
 import { RepairRequestForm } from './repair-request-form';
 import { updateRepairRequest } from '@/services/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Dashboard } from './dashboard';
 import { Separator } from './ui/separator';
 
 interface RepairListProps {
@@ -223,8 +222,6 @@ export function RepairList({
 
   return (
     <div className="space-y-6">
-      <Dashboard requests={requests} />
-      <Separator />
       <div className="rounded-md border">
         <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">

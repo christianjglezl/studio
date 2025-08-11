@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO } from 'date-fns';
-import { DollarSign, HardDrive, Wrench } from 'lucide-react';
+import { DollarSign, Wrench } from 'lucide-react';
 
 interface DashboardProps {
     requests: RepairRequest[];
@@ -104,7 +104,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests }) => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold font-headline">Dashboard</h2>
+                <h2 className="text-2xl font-bold font-headline">Rendimiento del Taller</h2>
                 <Select value={timePeriod} onValueChange={(value: TimePeriod) => setTimePeriod(value)}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Seleccionar Periodo" />
