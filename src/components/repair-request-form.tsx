@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -352,7 +353,8 @@ export function RepairRequestForm({
 
           {deviceFields.map((field, index) => {
              const selectedBrandId = watchedDevices[index]?.brandId;
-             const filteredModels = selectedBrandId ? models.filter(m => m.brandId === selectedBrandId) : [];
+             const safeModels = Array.isArray(models) ? models : [];
+             const filteredModels = selectedBrandId ? safeModels.filter(m => m.brandId === selectedBrandId) : [];
              const quoteValue = watchedDevices[index]?.quote || 0;
              const downPaymentValue = watchedDevices[index]?.downPayment || 0;
              const remainingValue = quoteValue - downPaymentValue;
@@ -632,3 +634,5 @@ export function RepairRequestForm({
     </Dialog>
   );
 }
+
+    
