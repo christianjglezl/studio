@@ -33,7 +33,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { PatternLock } from '@/components/pattern-lock';
 import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, DeviceInRequest } from '@/lib/types';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -267,7 +267,7 @@ export function RepairRequestForm({
         const newModelData = { name, brandId };
         const newId = await addItem('models', newModelData);
         const newModel: Model = { id: newId, ...newModelData };
-        setModels(prev => [...prev, newModel]);
+        setModels(prev => [...prev, newModel].sort((a,b) => a.name.localeCompare(b.name)));
         form.setValue(`devices.${addingModel.index}.modelId`, newModel.id);
         setAddingModel({ open: false, index: -1, brandId: '' });
     }
@@ -354,7 +354,10 @@ export function RepairRequestForm({
           {deviceFields.map((field, index) => {
              const selectedBrandId = watchedDevices[index]?.brandId;
              const safeModels = Array.isArray(models) ? models : [];
-             const filteredModels = selectedBrandId ? safeModels.filter(m => m.brandId === selectedBrandId) : [];
+             const filteredModels = useMemo(() => {
+                if (!selectedBrandId) return [];
+                return safeModels.filter(m => m.brandId === selectedBrandId);
+             }, [selectedBrandId, models]);
              const quoteValue = watchedDevices[index]?.quote || 0;
              const downPaymentValue = watchedDevices[index]?.downPayment || 0;
              const remainingValue = quoteValue - downPaymentValue;
@@ -634,5 +637,3 @@ export function RepairRequestForm({
     </Dialog>
   );
 }
-
-    
