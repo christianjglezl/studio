@@ -8,11 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, DollarSign, Wrench } from 'lucide-react';
+import { Calendar as CalendarIcon, DollarSign, Wrench, Search } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
-import { addDays, format, isWithinInterval, startOfWeek, endOfWeek, parseISO } from 'date-fns';
+import { format, isWithinInterval, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
+import { useToast } from '@/hooks/use-toast';
 
 interface DashboardProps {
     requests: RepairRequest[];
@@ -37,10 +38,33 @@ const serviceChartColors = [
 
 
 export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
+    const { toast } = useToast();
     const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
         from: startOfWeek(new Date(), { weekStartsOn: 1 }),
         to: endOfWeek(new Date(), { weekStartsOn: 1 }),
     });
+
+    const handlePendingSearch = () => {
+        const pendingRequests = requests.filter(req => req.status !== 'Entregado' && req.status !== 'Cancelado');
+
+        if (pendingRequests.length === 0) {
+            toast({
+                title: "¡Excelente!",
+                description: "No hay equipos pendientes por reparar.",
+                variant: 'success'
+            });
+            return;
+        }
+
+        const oldestRequest = pendingRequests.reduce((oldest, current) => {
+            return parseISO(current.createdAt) < parseISO(oldest.createdAt) ? current : oldest;
+        });
+
+        setDateRange({
+            from: parseISO(oldestRequest.createdAt),
+            to: new Date(),
+        });
+    };
 
     const stats = React.useMemo(() => {
         const interval = dateRange?.from && dateRange?.to 
@@ -130,40 +154,46 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold font-headline">Rendimiento del Taller</h2>
-                <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        id="date"
-                        variant={"outline"}
-                        className="w-[300px] justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {dateRange?.from ? (
-                          dateRange.to ? (
-                            <>
-                              {format(dateRange.from, "LLL dd, y", { locale: es })} -{" "}
-                              {format(dateRange.to, "LLL dd, y", { locale: es })}
-                            </>
-                          ) : (
-                            format(dateRange.from, "LLL dd, y")
-                          )
-                        ) : (
-                          <span>Selecciona un rango</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                      <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={dateRange?.from}
-                        selected={dateRange}
-                        onSelect={setDateRange}
-                        numberOfMonths={2}
-                        locale={es}
-                      />
-                    </PopoverContent>
-                </Popover>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={handlePendingSearch}>
+                        <Search className="mr-2 h-4 w-4" />
+                        Ver Pendientes
+                    </Button>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            id="date"
+                            variant={"outline"}
+                            className="w-[300px] justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? (
+                              dateRange.to ? (
+                                <>
+                                  {format(dateRange.from, "LLL dd, y", { locale: es })} -{" "}
+                                  {format(dateRange.to, "LLL dd, y", { locale: es })}
+                                </>
+                              ) : (
+                                format(dateRange.from, "LLL dd, y")
+                              )
+                            ) : (
+                              <span>Selecciona un rango</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                          <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateRange?.from}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            numberOfMonths={2}
+                            locale={es}
+                          />
+                        </PopoverContent>
+                    </Popover>
+                </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
