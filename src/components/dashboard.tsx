@@ -81,13 +81,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
             
         // Service chart data
         const serviceCounts: { [key: string]: number } = {};
-        requestsInDateRange.forEach(req => {
-            req.devices.forEach(dev => {
-                dev.serviceIds.forEach(serviceId => {
-                    serviceCounts[serviceId] = (serviceCounts[serviceId] || 0) + 1;
+        requestsInDateRange
+            .filter(req => req.status !== 'Listo para Entrega' && req.status !== 'Entregado' && req.status !== 'Cancelado')
+            .forEach(req => {
+                req.devices.forEach(dev => {
+                    dev.serviceIds.forEach(serviceId => {
+                        serviceCounts[serviceId] = (serviceCounts[serviceId] || 0) + 1;
+                    })
                 })
-            })
-        });
+            });
 
         const serviceChartData = Object.entries(serviceCounts)
             .map(([serviceId, count], index) => {
@@ -207,7 +209,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
                     </CardContent>
                 </Card>
                  <Card>
-                    <CardHeader><CardTitle className="font-headline">Servicios Populares</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="font-headline">Servicios Pendientes</CardTitle></CardHeader>
                     <CardContent>
                          {stats.serviceChartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height={350}>
@@ -220,7 +222,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
                                 </PieChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="flex justify-center items-center h-[350px]"><p className="text-muted-foreground">No se solicitaron servicios en este periodo.</p></div>
+                            <div className="flex justify-center items-center h-[350px]"><p className="text-muted-foreground">No se hay servicios pendientes en este periodo.</p></div>
                         )}
                     </CardContent>
                 </Card>
