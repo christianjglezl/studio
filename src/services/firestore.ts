@@ -51,11 +51,15 @@ export const getRepairRequests = async (): Promise<RepairRequest[]> => {
         const devices = devicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as DeviceInRequest));
         
         const createdAt = data.createdAt?.toDate().toISOString() || new Date().toISOString();
+        const updatedAt = data.updatedAt?.toDate().toISOString();
+        const deliveryDate = data.deliveryDate?.toDate().toISOString();
 
         return { 
             id: doc.id, 
             ...data, 
             createdAt,
+            updatedAt,
+            deliveryDate,
             devices 
         } as RepairRequest;
     }));
@@ -83,6 +87,7 @@ export const addRepairRequest = async (requestData: Omit<RepairRequest, 'id' | '
             folio: nextFolio,
             status: 'Ingresado',
             createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
         });
 
         devices.forEach(device => {
@@ -96,18 +101,42 @@ export const addRepairRequest = async (requestData: Omit<RepairRequest, 'id' | '
     });
 };
 
-export const updateRepairRequest = async (id: string, data: Partial<Omit<RepairRequest, 'devices'>>) => {
-    const docRef = doc(db, 'repairRequests', id);
-    await updateDoc(docRef, data);
+export const updateRepairRequestStatus = async (id: string, status: RepairRequest['status'], devices: DeviceInRequest[]): Promise<void> => {
+    const requestRef = doc(db, 'repairRequests', id);
+    const batch = writeBatch(db);
+
+    const updateData: Partial<RepairRequest> & { updatedAt: any } = {
+        status: status,
+        updatedAt: serverTimestamp(),
+    };
+
+    if (status === 'Entregado') {
+        updateData.deliveryDate = serverTimestamp();
+        
+        devices.forEach(device => {
+            if (device.id) {
+                const deviceRef = doc(db, `repairRequests/${id}/devices`, device.id);
+                // Set downPayment to quote to make remaining 0
+                batch.update(deviceRef, { downPayment: device.quote });
+            }
+        });
+    }
+
+    batch.update(requestRef, updateData);
+
+    await batch.commit();
 };
+
 
 export const updateRepairRequestWithDevices = async (id: string, data: Omit<RepairRequest, 'id' | 'folio' | 'createdAt' | 'status'>) => {
     const batch = writeBatch(db);
     const requestRef = doc(db, 'repairRequests', id);
 
     const { devices, ...requestData } = data;
+    
+    const finalRequestData = {...requestData, updatedAt: serverTimestamp()};
 
-    batch.update(requestRef, requestData);
+    batch.update(requestRef, finalRequestData);
 
     devices.forEach(device => {
         if (!device.id) {

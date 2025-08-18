@@ -1,3 +1,4 @@
+
 export interface Brand {
   id: string;
   name: string;
@@ -64,6 +65,8 @@ export interface RepairRequest {
   phoneNumbers: { value: string }[];
   devices: DeviceInRequest[];
   createdAt: string;
+  updatedAt?: string;
+  deliveryDate?: string;
   status: RepairStatus;
 }
 

@@ -45,14 +45,35 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests }) => {
                 break;
         }
 
+        // Filter by creation date for general stats, but income will be filtered by delivery date
         return requests.filter(req => isWithinInterval(parseISO(req.createdAt), interval));
     }, [requests, timePeriod]);
+    
+    const incomeFilteredRequests = useMemo(() => {
+        const now = new Date();
+        let interval: Interval;
+
+        switch (timePeriod) {
+            case 'weekly':
+                interval = { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+                break;
+            case 'monthly':
+                interval = { start: startOfMonth(now), end: endOfMonth(now) };
+                break;
+            case 'annually':
+                interval = { start: startOfYear(now), end: endOfYear(now) };
+                break;
+        }
+
+        // Filter by delivery date for income calculation
+        return requests.filter(req => req.status === 'Entregado' && req.deliveryDate && isWithinInterval(parseISO(req.deliveryDate), interval));
+    }, [requests, timePeriod]);
+
 
     const stats = useMemo(() => {
         const totalRequests = filteredRequests.length;
         
-        const totalIncome = filteredRequests
-            .filter(req => req.status === 'Entregado')
+        const totalIncome = incomeFilteredRequests
             .reduce((sum, req) => sum + req.devices.reduce((deviceSum, dev) => deviceSum + (dev.quote || 0), 0), 0);
 
         const totalDownPayments = filteredRequests
@@ -84,7 +105,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests }) => {
 
 
         return { totalRequests, totalIncome, totalDownPayments, chartData };
-    }, [filteredRequests]);
+    }, [filteredRequests, incomeFilteredRequests]);
     
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, ...props }: any) => {
@@ -125,17 +146,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests }) => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.totalRequests}</div>
-                        <p className="text-xs text-muted-foreground">En el periodo seleccionado</p>
+                        <p className="text-xs text-muted-foreground">Ingresadas en el periodo</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Ingresos (Completados)</CardTitle>
+                        <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">${stats.totalIncome.toFixed(2)}</div>
-                        <p className="text-xs text-muted-foreground">De reparaciones entregadas</p>
+                        <p className="text-xs text-muted-foreground">De reparaciones entregadas en el periodo</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -145,7 +166,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests }) => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">${stats.totalDownPayments.toFixed(2)}</div>
-                        <p className="text-xs text-muted-foreground">En el periodo seleccionado</p>
+                        <p className="text-xs text-muted-foreground">De reparaciones ingresadas en el periodo</p>
                     </CardContent>
                 </Card>
             </div>
@@ -155,37 +176,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests }) => {
                     <CardTitle className="font-headline">Estatus de Reparaciones</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ResponsiveContainer width="100%" height={350}>
-                        <PieChart>
-                             <Pie
-                                data={stats.chartData}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={renderCustomizedLabel}
-                                outerRadius={120}
-                                dataKey="value"
-                                nameKey="name"
-                            >
-                                {stats.chartData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.fill} stroke={entry.fill} />
-                                ))}
-                            </Pie>
-                            <Tooltip
-                                contentStyle={{
-                                    backgroundColor: 'hsl(var(--background))',
-                                    borderColor: 'hsl(var(--border))',
-                                    borderRadius: 'var(--radius)',
-                                }}
-                            />
-                            <Legend
-                                iconSize={10}
-                                layout="horizontal"
-                                verticalAlign="bottom"
-                                align="center"
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
+                     {filteredRequests.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={350}>
+                            <PieChart>
+                                <Pie
+                                    data={stats.chartData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={renderCustomizedLabel}
+                                    outerRadius={120}
+                                    dataKey="value"
+                                    nameKey="name"
+                                >
+                                    {stats.chartData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} stroke={entry.fill} />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: 'hsl(var(--background))',
+                                        borderColor: 'hsl(var(--border))',
+                                        borderRadius: 'var(--radius)',
+                                    }}
+                                />
+                                <Legend
+                                    iconSize={10}
+                                    layout="horizontal"
+                                    verticalAlign="bottom"
+                                    align="center"
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="flex justify-center items-center h-[350px]">
+                            <p className="text-muted-foreground">No hay datos de reparaciones para el periodo seleccionado.</p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

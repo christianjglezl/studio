@@ -15,12 +15,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { RepairRequest, RepairStatus, CatalogData, DeviceInRequest } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ChevronDown, Pencil, Printer, Smartphone } from 'lucide-react';
 import { RepairRequestForm } from './repair-request-form';
-import { updateRepairRequest } from '@/services/firestore';
+import { updateRepairRequestStatus } from '@/services/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
 
@@ -50,12 +50,16 @@ const getEntityName = <T extends { id: string; name: string }>(id: string, entit
 
 const getEntityNames = <T extends { id: string; name: string }>(ids: string[] = [], entities: T[]): string => {
     if (!ids || ids.length === 0) return 'Ninguno';
+    if (!Array.isArray(entities)) return 'Cargando...';
     return ids.map(id => getEntityName(id, entities)).join(', ');
 };
 
-const DeviceDetails = ({ device, catalog }: { device: DeviceInRequest; catalog: CatalogData }) => {
+const DeviceDetails = ({ device, catalog, request }: { device: DeviceInRequest; catalog: CatalogData, request: RepairRequest }) => {
   const { models, colors, accessories, conditions, services } = catalog;
-  const remaining = (device.quote || 0) - (device.downPayment || 0);
+  let remaining = (device.quote || 0) - (device.downPayment || 0);
+  if (request.status === 'Entregado') {
+      remaining = 0;
+  }
   
   return (
     <div className="p-4 grid md:grid-cols-4 gap-4 bg-background rounded-lg border">
@@ -111,7 +115,7 @@ const RepairRow = ({
   deviceIndex: number;
   totalDevices: number;
   catalog: CatalogData;
-  onStatusChange: (requestId: string, newStatus: RepairStatus) => void;
+  onStatusChange: (requestId: string, newStatus: RepairStatus, devices: DeviceInRequest[]) => void;
   onEdit: (request: RepairRequest) => void;
   onPrint: (request: RepairRequest) => void;
 }) => {
@@ -134,11 +138,21 @@ const RepairRow = ({
         <TableCell>{request.clientName}</TableCell>
         <TableCell>{request.phoneNumbers[0]?.value || 'N/A'}</TableCell>
         <TableCell>{deviceDescription}{deviceCountIndicator}</TableCell>
-        <TableCell>{format(new Date(request.createdAt), 'PPp', { locale: es })}</TableCell>
+        <TableCell>
+          <div className="flex flex-col">
+            <span>{format(parseISO(request.createdAt), 'PPp', { locale: es })}</span>
+            {request.deliveryDate && (
+                <span className="text-xs text-green-600">Entregado: {format(parseISO(request.deliveryDate), 'PPp', { locale: es })}</span>
+            )}
+            {request.updatedAt && !request.deliveryDate && (
+                 <span className="text-xs text-muted-foreground">Act: {format(parseISO(request.updatedAt), 'PPp', { locale: es })}</span>
+            )}
+          </div>
+        </TableCell>
         <TableCell>
           <Select
             value={request.status}
-            onValueChange={(newStatus: RepairStatus) => onStatusChange(request.id, newStatus)}
+            onValueChange={(newStatus: RepairStatus) => onStatusChange(request.id, newStatus, request.devices)}
           >
             <SelectTrigger className="w-[180px]">
               <div className="flex items-center gap-2">
@@ -169,7 +183,7 @@ const RepairRow = ({
       {isOpen && (
           <TableRow className="bg-muted/50">
               <TableCell colSpan={8} className="p-4 space-y-4">
-                <DeviceDetails device={device} catalog={catalog} />
+                <DeviceDetails device={device} catalog={catalog} request={request}/>
               </TableCell>
           </TableRow>
       )}
@@ -184,14 +198,28 @@ export function RepairList({
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
   const { toast } = useToast();
   
-  const handleStatusChange = async (requestId: string, newStatus: RepairStatus) => {
+  const handleStatusChange = async (requestId: string, newStatus: RepairStatus, devices: DeviceInRequest[]) => {
     try {
-      await updateRepairRequest(requestId, { status: newStatus });
+      await updateRepairRequestStatus(requestId, newStatus, devices);
+      
       setRequests(prevRequests =>
-        prevRequests.map(req =>
-          req.id === requestId ? { ...req, status: newStatus } : req
-        )
+        prevRequests.map(req => {
+          if (req.id === requestId) {
+            const updatedReq = { 
+                ...req, 
+                status: newStatus, 
+                updatedAt: new Date().toISOString() 
+            };
+            if (newStatus === 'Entregado') {
+                updatedReq.deliveryDate = new Date().toISOString();
+                updatedReq.devices = req.devices.map(d => ({ ...d, downPayment: d.quote }));
+            }
+            return updatedReq;
+          }
+          return req;
+        })
       );
+      
       toast({
         title: "Estatus Actualizado",
         description: `El estatus del folio #${String(requests.find(r=>r.id===requestId)?.folio).padStart(4, '0')} ha sido cambiado a "${newStatus}".`,
@@ -211,8 +239,8 @@ export function RepairList({
     setEditingRequest(request);
   }
   
-  const allDevices = requests.flatMap(req => 
-      (req.devices || []).map((dev, index) => ({
+  const allDevicesInRequests = requests.flatMap(req => 
+      (req.devices && req.devices.length > 0 ? req.devices : [{}] as DeviceInRequest[]).map((dev, index) => ({
           request: req,
           device: dev,
           deviceIndex: index,
@@ -247,15 +275,15 @@ export function RepairList({
               <TableHead>Cliente</TableHead>
               <TableHead>Teléfono</TableHead>
               <TableHead>Dispositivo(s)</TableHead>
-              <TableHead>Fecha de Ingreso</TableHead>
+              <TableHead>Fecha</TableHead>
               <TableHead>Estatus</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           
           <TableBody>
-              {allDevices.length > 0 ? (
-                allDevices.map(({ request, device, deviceIndex, totalDevices }) => (
+              {allDevicesInRequests.length > 0 ? (
+                allDevicesInRequests.map(({ request, device, deviceIndex, totalDevices }) => (
                   <RepairRow 
                     key={device.id || `${request.id}-${deviceIndex}`}
                     request={request}
@@ -281,5 +309,3 @@ export function RepairList({
     </div>
   );
 }
-
-    
