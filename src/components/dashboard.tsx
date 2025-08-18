@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, 'react';
+import React from 'react';
 import type { RepairRequest, RepairStatus, Service } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -228,5 +228,3 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
         </div>
     );
 };
-
-    
