@@ -281,7 +281,7 @@ function AppScreen() {
               </Card>
             </TabsContent>
             <TabsContent value="dashboard">
-                <Dashboard requests={repairRequests} />
+                <Dashboard requests={repairRequests} catalog={catalog}/>
             </TabsContent>
             <TabsContent value="catalog">
               <Card>
@@ -333,5 +333,7 @@ export default function Home() {
 
   return <AppScreen />;
 }
+
+    
 
     
