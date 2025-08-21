@@ -180,7 +180,7 @@ const TermFormDialog: React.FC<{
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
@@ -208,7 +208,7 @@ export function CatalogManager({
 
   return (
     <Tabs defaultValue="brands" className="w-full">
-      <TabsList className="grid w-full grid-cols-3 md:grid-cols-7">
+      <TabsList className="h-auto grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-7">
         <TabsTrigger value="brands">Marcas</TabsTrigger>
         <TabsTrigger value="models">Modelos</TabsTrigger>
         <TabsTrigger value="colors">Colores</TabsTrigger>
@@ -443,4 +443,3 @@ export function CatalogManager({
     </Tabs>
   );
 }
-

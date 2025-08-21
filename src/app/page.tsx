@@ -212,13 +212,13 @@ function AppScreen() {
 
   return (
     <>
-      <main className="flex min-h-screen flex-col items-center p-4 sm:p-8 md:p-12 print:hidden">
+      <main className="flex min-h-screen flex-col items-center p-4 sm:p-8 print:hidden">
         <div className="w-full max-w-6xl">
-          <header className="mb-8 flex justify-between items-start">
+          <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-start gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
                  <Image src={LOGO_URL} alt="Easy Tech Logo" width={50} height={50} unoptimized/>
-                <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
+                <h1 className="text-3xl sm:text-4xl font-bold font-headline text-primary">Easy Tech</h1>
               </div>
               <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
             </div>
@@ -229,14 +229,14 @@ function AppScreen() {
           </header>
           
           <Tabs defaultValue="repair" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="h-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
               <TabsTrigger value="repair">
                 <Wrench className="mr-2 h-4 w-4" />
-                Nueva Solicitud de Reparación
+                Nueva Reparación
               </TabsTrigger>
               <TabsTrigger value="list">
                 <List className="mr-2 h-4 w-4" />
-                Lista de Reparaciones
+                Reparaciones
               </TabsTrigger>
               <TabsTrigger value="dashboard">
                   <LineChart className="mr-2 h-4 w-4" />
@@ -244,7 +244,7 @@ function AppScreen() {
               </TabsTrigger>
               <TabsTrigger value="catalog">
                 <HardDrive className="mr-2 h-4 w-4" />
-                Catálogo
+                Catálogos
               </TabsTrigger>
             </TabsList>
             <TabsContent value="repair">
@@ -333,7 +333,3 @@ export default function Home() {
 
   return <AppScreen />;
 }
-
-    
-
-    

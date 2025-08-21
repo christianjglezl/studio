@@ -152,10 +152,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold font-headline">Rendimiento del Taller</h2>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={handlePendingSearch}>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h2 className="text-2xl font-bold font-headline text-center sm:text-left">Rendimiento del Taller</h2>
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                    <Button variant="outline" onClick={handlePendingSearch} className="w-full sm:w-auto">
                         <Search className="mr-2 h-4 w-4" />
                         Ver Pendientes
                     </Button>
@@ -164,7 +164,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
                           <Button
                             id="date"
                             variant={"outline"}
-                            className="w-[300px] justify-start text-left font-normal"
+                            className="w-full sm:w-[300px] justify-start text-left font-normal"
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {dateRange?.from ? (

@@ -309,7 +309,7 @@ export function RepairRequestForm({
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           {!isEditing && (
             <div className="flex justify-between items-center p-2 bg-secondary rounded-lg">
-                <div className='flex items-center gap-4'>
+                <div className='flex flex-wrap items-center gap-4'>
                     <div className="flex items-center gap-2 text-sm text-secondary-foreground">
                         <CalendarIcon className="h-4 w-4" />
                         <span>{format(currentDateTime, 'PPP', { locale: es })}</span>
@@ -384,7 +384,7 @@ export function RepairRequestForm({
              return (
                 <Collapsible key={field.id} open={isOpen} onOpenChange={() => handleToggleDevice(index)} className="group">
                 <Card className="border-primary border-2 p-0 overflow-hidden">
-                     <div className="flex justify-between items-center w-full p-6">
+                     <div className="flex justify-between items-center w-full p-4 sm:p-6">
                         <CollapsibleTrigger asChild>
                             <div role="button" className="flex items-center gap-2 text-lg font-headline text-primary cursor-pointer">
                                 {isOpen ? <ChevronUp /> : <ChevronDown />}
@@ -398,7 +398,7 @@ export function RepairRequestForm({
                          )}
                      </div>
                     <CollapsibleContent>
-                        <div className="grid md:grid-cols-2 gap-8 p-6 pt-0">
+                        <div className="grid md:grid-cols-2 gap-6 p-4 sm:p-6 pt-0">
                             <div className="space-y-6">
                                 <Card>
                                     <CardHeader><CardTitle className="font-headline text-base">Información del Dispositivo</CardTitle></CardHeader>
@@ -432,7 +432,7 @@ export function RepairRequestForm({
                                                 <FormLabel>Servicio(s) Requerido(s)</FormLabel>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="outline" className="w-full justify-start font-normal">
+                                                        <Button variant="outline" className="w-full justify-start text-left font-normal">
                                                            {selectedServicesText}
                                                         </Button>
                                                     </DropdownMenuTrigger>
@@ -612,15 +612,15 @@ export function RepairRequestForm({
              );
           })}
           
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             {!isEditing && (
                 <Button type="button" variant="outline" onClick={handleAddDevice}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Agregar Otro Dispositivo
                 </Button>
             )}
-            <div className={cn(isEditing && 'w-full flex justify-end')}>
-                <Button type="submit" size="lg">
+            <div className={cn(isEditing && 'w-full flex justify-end', 'w-full sm:w-auto')}>
+                <Button type="submit" size="lg" className="w-full sm:w-auto">
                     {isEditing ? 'Actualizar Registro' : 'Guardar'}
                 </Button>
             </div>
@@ -633,5 +633,3 @@ export function RepairRequestForm({
     </Dialog>
   );
 }
-
-    

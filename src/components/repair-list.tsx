@@ -136,9 +136,9 @@ const RepairRow = ({
         </TableCell>
         <TableCell className="font-medium">{String(request.folio).padStart(4, '0')}</TableCell>
         <TableCell>{request.clientName}</TableCell>
-        <TableCell>{request.phoneNumbers[0]?.value || 'N/A'}</TableCell>
+        <TableCell className="hidden md:table-cell">{request.phoneNumbers[0]?.value || 'N/A'}</TableCell>
         <TableCell>{deviceDescription}{deviceCountIndicator}</TableCell>
-        <TableCell>
+        <TableCell className="hidden sm:table-cell">
           <div className="flex flex-col">
             <span>{format(parseISO(request.createdAt), 'PPp', { locale: es })}</span>
             {request.deliveryDate && (
@@ -182,7 +182,7 @@ const RepairRow = ({
       </TableRow>
       {isOpen && (
           <TableRow className="bg-muted/50">
-              <TableCell colSpan={8} className="p-4 space-y-4">
+              <TableCell colSpan={8} className="p-2 sm:p-4 space-y-4">
                 <DeviceDetails device={device} catalog={catalog} request={request}/>
               </TableCell>
           </TableRow>
@@ -253,7 +253,7 @@ export function RepairList({
     <div className="space-y-6">
       <div className="rounded-md border">
         <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Editar Solicitud de Reparación (Folio: {String(editingRequest?.folio).padStart(4, '0')})</DialogTitle>
             </DialogHeader>
@@ -267,44 +267,46 @@ export function RepairList({
             />
           </DialogContent>
         </Dialog>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12"></TableHead>
-              <TableHead>Folio</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Teléfono</TableHead>
-              <TableHead>Dispositivo(s)</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Estatus</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          
-          <TableBody>
-              {allDevicesInRequests.length > 0 ? (
-                allDevicesInRequests.map(({ request, device, deviceIndex, totalDevices }) => (
-                  <RepairRow 
-                    key={device.id || `${request.id}-${deviceIndex}`}
-                    request={request}
-                    device={device}
-                    deviceIndex={deviceIndex}
-                    totalDevices={totalDevices}
-                    catalog={catalog}
-                    onStatusChange={handleStatusChange}
-                    onEdit={handleEdit}
-                    onPrint={onPrintRequest}
-                  />
-                ))
-              ) : (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
-                      No hay solicitudes de reparación registradas.
-                    </TableCell>
-                  </TableRow>
-              )}
-          </TableBody>
-        </Table>
+        <div className="w-full overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12"></TableHead>
+                <TableHead>Folio</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead className="hidden md:table-cell">Teléfono</TableHead>
+                <TableHead>Dispositivo(s)</TableHead>
+                <TableHead className="hidden sm:table-cell">Fecha</TableHead>
+                <TableHead>Estatus</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            
+            <TableBody>
+                {allDevicesInRequests.length > 0 ? (
+                  allDevicesInRequests.map(({ request, device, deviceIndex, totalDevices }) => (
+                    <RepairRow 
+                      key={device.id || `${request.id}-${deviceIndex}`}
+                      request={request}
+                      device={device}
+                      deviceIndex={deviceIndex}
+                      totalDevices={totalDevices}
+                      catalog={catalog}
+                      onStatusChange={handleStatusChange}
+                      onEdit={handleEdit}
+                      onPrint={onPrintRequest}
+                    />
+                  ))
+                ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
+                        No hay solicitudes de reparación registradas.
+                      </TableCell>
+                    </TableRow>
+                )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );
