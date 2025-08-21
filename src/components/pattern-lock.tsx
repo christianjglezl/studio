@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
@@ -169,7 +170,7 @@ export function PatternLock({ name, className }: PatternLockProps) {
         onTouchStart={handleInteractionStart}
         onTouchMove={handleInteractionMove}
         onTouchEnd={handleInteractionEnd}
-        className="cursor-pointer rounded-lg border bg-card"
+        className="cursor-pointer rounded-lg border bg-card touch-none"
       />
       <Button type="button" variant="outline" size="sm" onClick={clearPattern} disabled={pattern.length === 0}>
         Limpiar Patrón
