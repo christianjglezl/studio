@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import type { RepairRequest, RepairStatus, Service } from '@/lib/types';
+import type { RepairRequest, RepairStatus, Service, CatalogData } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface DashboardProps {
     requests: RepairRequest[];
-    catalog: { services: Service[] };
+    catalog: CatalogData;
 }
 
 const statusColors: { [key in RepairStatus]: string } = {
@@ -26,8 +26,9 @@ const statusColors: { [key in RepairStatus]: string } = {
   'En Reparación': '#f97316',
   Reparado: '#8b5cf6',
   'Listo para Entrega': '#6ee7b7',
+  'Sin reparación': '#9ca3af',
   Entregado: '#22c55e',
-  Cancelado: '#ef4444',
+  'Entregado (no reparado)': '#6b7280',
 };
 
 const serviceChartColors = [
@@ -45,7 +46,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
     });
 
     const handlePendingSearch = () => {
-        const pendingRequests = requests.filter(req => req.status !== 'Entregado' && req.status !== 'Cancelado');
+        const pendingRequests = requests.filter(req => req.status !== 'Entregado' && req.status !== 'Entregado (no reparado)');
 
         if (pendingRequests.length === 0) {
             toast({
@@ -83,30 +84,35 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
             .reduce((sum, req) => sum + req.devices.reduce((deviceSum, dev) => deviceSum + (dev.downPayment || 0), 0), 0);
 
         const incomeFromDelivered = requests
-            .filter(req => req.status === 'Entregado' && req.deliveryDate && isWithinInterval(parseISO(req.deliveryDate), interval))
+            .filter(req => 
+                (req.status === 'Entregado' || req.status === 'Entregado (no reparado)') && 
+                req.deliveryDate && 
+                isWithinInterval(parseISO(req.deliveryDate), interval)
+            )
             .reduce((sum, req) => sum + req.devices.reduce((deviceSum, dev) => deviceSum + ((dev.quote || 0) - (dev.downPayment || 0)), 0), 0);
         
         const totalIncome = incomeFromNewRequests + incomeFromDelivered;
         
         // Status chart data
-        const statusCounts: { [key in RepairStatus]: number } = { ...repairStatuses.reduce((acc, s) => ({...acc, [s]: 0}), {} as any) };
+        const statusCounts: { [key in RepairStatus]?: number } = {};
         requestsInDateRange.forEach(req => {
-            if (statusCounts.hasOwnProperty(req.status)) {
-                statusCounts[req.status]++;
+            if (req.status) {
+              statusCounts[req.status] = (statusCounts[req.status] || 0) + 1;
             }
         });
         const statusChartData = repairStatuses
             .map(status => ({
                 name: status,
-                value: statusCounts[status],
+                value: statusCounts[status] || 0,
                 fill: statusColors[status],
             }))
             .filter(item => item.value > 0);
             
-        // Service chart data
+        // Service chart data for PENDING services
         const serviceCounts: { [key: string]: number } = {};
-        requestsInDateRange
-            .filter(req => req.status !== 'Listo para Entrega' && req.status !== 'Entregado' && req.status !== 'Cancelado')
+        requests
+            .filter(req => req.status !== 'Listo para Entrega' && req.status !== 'Entregado' && req.status !== 'Entregado (no reparado)')
+            .filter(req => isWithinInterval(parseISO(req.createdAt), interval))
             .forEach(req => {
                 req.devices.forEach(dev => {
                     dev.serviceIds.forEach(serviceId => {
@@ -252,7 +258,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
                                 </PieChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="flex justify-center items-center h-[350px]"><p className="text-muted-foreground">No se hay servicios pendientes en este periodo.</p></div>
+                            <div className="flex justify-center items-center h-[350px]"><p className="text-muted-foreground">No hay servicios pendientes en este periodo.</p></div>
                         )}
                     </CardContent>
                 </Card>

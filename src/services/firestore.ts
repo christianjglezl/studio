@@ -1,7 +1,7 @@
 
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, writeBatch, serverTimestamp, getDoc, runTransaction } from 'firebase/firestore';
-import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition, RepairRequest, DeviceInRequest, CatalogData } from '@/lib/types';
+import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition, RepairRequest, DeviceInRequest, CatalogData, RepairStatus } from '@/lib/types';
 
 // This is a generic type for items in our catalog collections
 type CollectionType = Brand | Model | Color | Accessory | Condition | Service | TermAndCondition;
@@ -86,6 +86,7 @@ export const addRepairRequest = async (requestData: Omit<RepairRequest, 'id' | '
             ...request,
             folio: nextFolio,
             status: 'Ingresado',
+            notes: '',
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
@@ -101,18 +102,21 @@ export const addRepairRequest = async (requestData: Omit<RepairRequest, 'id' | '
     });
 };
 
-export const updateRepairRequestStatus = async (id: string, status: RepairRequest['status'], devices: DeviceInRequest[]): Promise<void> => {
+export const updateRepairRequestStatus = async (id: string, status: RepairStatus, devices: DeviceInRequest[]): Promise<void> => {
     const requestRef = doc(db, 'repairRequests', id);
     const batch = writeBatch(db);
 
-    const updateData: Partial<RepairRequest> & { updatedAt: any } = {
+    const updateData: Partial<Omit<RepairRequest, 'id'|'devices'>> & { updatedAt: any } = {
         status: status,
         updatedAt: serverTimestamp(),
     };
 
-    if (status === 'Entregado') {
+    if (status === 'Entregado' || status === 'Entregado (no reparado)') {
         updateData.deliveryDate = serverTimestamp();
-        
+    }
+    
+    // Only zero out balance if it was a successful repair
+    if (status === 'Entregado') {
         devices.forEach(device => {
             if (device.id) {
                 const deviceRef = doc(db, `repairRequests/${id}/devices`, device.id);
@@ -127,6 +131,13 @@ export const updateRepairRequestStatus = async (id: string, status: RepairReques
     await batch.commit();
 };
 
+export const updateRepairRequestNotes = async (id: string, notes: string): Promise<void> => {
+    const requestRef = doc(db, 'repairRequests', id);
+    await updateDoc(requestRef, {
+        notes: notes,
+        updatedAt: serverTimestamp()
+    });
+}
 
 export const updateRepairRequestWithDevices = async (id: string, data: Omit<RepairRequest, 'id' | 'folio' | 'createdAt' | 'status'>) => {
     const batch = writeBatch(db);
@@ -134,14 +145,14 @@ export const updateRepairRequestWithDevices = async (id: string, data: Omit<Repa
 
     const { devices, ...requestData } = data;
     
-    const finalRequestData = {...requestData, updatedAt: serverTimestamp()};
+    const finalRequestData: Partial<Omit<RepairRequest, 'id'|'devices'>> & { updatedAt: any } = {...requestData, updatedAt: serverTimestamp()};
 
     batch.update(requestRef, finalRequestData);
 
     devices.forEach(device => {
         if (!device.id) {
             console.error("Device missing ID, cannot update:", device);
-            return; // Or create a new one if that's the desired behavior
+            return;
         }
         const deviceRef = doc(db, `repairRequests/${id}/devices`, device.id);
         

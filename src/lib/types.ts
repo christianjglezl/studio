@@ -35,9 +35,9 @@ export interface TermAndCondition {
   text: string;
 }
 
-export type RepairStatus = 'Ingresado' | 'En Revisión' | 'En Reparación' | 'Reparado' | 'Listo para Entrega' | 'Entregado' | 'Cancelado';
+export type RepairStatus = 'Ingresado' | 'En Revisión' | 'En Reparación' | 'Reparado' | 'Listo para Entrega' | 'Entregado' | 'Sin reparación' | 'Entregado (no reparado)';
 
-export const repairStatuses: RepairStatus[] = ['Ingresado', 'En Revisión', 'En Reparación', 'Reparado', 'Listo para Entrega', 'Entregado', 'Cancelado'];
+export const repairStatuses: RepairStatus[] = ['Ingresado', 'En Revisión', 'En Reparación', 'Reparado', 'Listo para Entrega', 'Sin reparación', 'Entregado', 'Entregado (no reparado)'];
 
 export interface DeviceInRequest {
   id: string;
@@ -68,6 +68,7 @@ export interface RepairRequest {
   updatedAt?: string;
   deliveryDate?: string;
   status: RepairStatus;
+  notes?: string;
 }
 
 export interface CatalogData {

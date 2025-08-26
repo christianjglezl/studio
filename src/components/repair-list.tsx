@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Select,
@@ -11,18 +11,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import type { RepairRequest, RepairStatus, CatalogData, DeviceInRequest } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { ChevronDown, Pencil, Printer, Smartphone } from 'lucide-react';
+import { ChevronDown, Pencil, Printer, Smartphone, MessageSquare } from 'lucide-react';
 import { RepairRequestForm } from './repair-request-form';
-import { updateRepairRequestStatus } from '@/services/firestore';
+import { updateRepairRequestStatus, updateRepairRequestNotes } from '@/services/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from './ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 interface RepairListProps {
   requests: RepairRequest[];
@@ -38,13 +39,14 @@ const statusColors: { [key in RepairStatus]: string } = {
   'En Revisión': 'bg-yellow-500',
   'En Reparación': 'bg-orange-500',
   Reparado: 'bg-purple-500',
-  'Listo para Entrega': 'bg-emerald-400', // Mint color
+  'Listo para Entrega': 'bg-emerald-400',
+  'Sin reparación': 'bg-gray-400',
   Entregado: 'bg-green-500',
-  Cancelado: 'bg-red-500',
+  'Entregado (no reparado)': 'bg-gray-600',
 };
 
 const getEntityName = <T extends { id: string; name: string }>(id: string, entities: T[]): string => {
-  if (!Array.isArray(entities)) return 'N/A'; // Safeguard
+  if (!Array.isArray(entities)) return 'N/A';
   return entities.find(e => e.id === id)?.name || 'N/A';
 };
 
@@ -102,28 +104,75 @@ const DeviceDetails = ({ device, catalog, request }: { device: DeviceInRequest; 
   )
 }
 
+const NotesModal = ({
+  request,
+  isOpen,
+  onClose,
+  onSave
+}: {
+  request: RepairRequest,
+  isOpen: boolean,
+  onClose: () => void,
+  onSave: (notes: string) => Promise<void>
+}) => {
+    const [notes, setNotes] = useState(request.notes || '');
+    const {toast} = useToast();
+
+    const handleSave = async () => {
+        try {
+            await onSave(notes);
+            toast({ title: 'Notas guardadas', description: 'Las notas internas han sido actualizadas.', variant: 'success'});
+            onClose();
+        } catch (error) {
+            toast({ title: 'Error', description: 'No se pudieron guardar las notas.', variant: 'destructive'});
+        }
+    }
+
+    if (!isOpen) return null;
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Notas Internas - Folio {String(request.folio).padStart(4, '0')}</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                    <Label htmlFor="internal-notes">Notas de la reparación</Label>
+                    <Textarea 
+                        id="internal-notes"
+                        value={notes} 
+                        onChange={e => setNotes(e.target.value)} 
+                        rows={6}
+                        placeholder="Añade notas sobre el diagnóstico, comunicación con el cliente, etc."
+                    />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>Cancelar</Button>
+                    <Button onClick={handleSave}>Guardar Notas</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 const RepairRow = ({ 
   request,
-  device,
-  deviceIndex,
-  totalDevices,
   catalog,
-  onStatusChange, onEdit, onPrint
+  onStatusChange, onEdit, onPrint, onOpenNotes
 }: {
   request: RepairRequest;
-  device: DeviceInRequest;
-  deviceIndex: number;
-  totalDevices: number;
   catalog: CatalogData;
   onStatusChange: (requestId: string, newStatus: RepairStatus, devices: DeviceInRequest[]) => void;
   onEdit: (request: RepairRequest) => void;
   onPrint: (request: RepairRequest) => void;
+  onOpenNotes: (request: RepairRequest) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { brands, models } = catalog;
 
-  const deviceDescription = `${getEntityName(device.brandId, brands)} ${getEntityName(device.modelId, models)}`;
-  const deviceCountIndicator = totalDevices > 1 ? ` (${deviceIndex + 1} de ${totalDevices})` : '';
+  const deviceDescription = request.devices.map(device => 
+    `${getEntityName(device.brandId, brands)} ${getEntityName(device.modelId, models)}`
+  ).join('; ');
 
   return (
     <>
@@ -137,7 +186,7 @@ const RepairRow = ({
         <TableCell className="font-medium">{String(request.folio).padStart(4, '0')}</TableCell>
         <TableCell>{request.clientName}</TableCell>
         <TableCell className="hidden md:table-cell">{request.phoneNumbers[0]?.value || 'N/A'}</TableCell>
-        <TableCell>{deviceDescription}{deviceCountIndicator}</TableCell>
+        <TableCell>{deviceDescription}</TableCell>
         <TableCell className="hidden sm:table-cell">
           <div className="flex flex-col">
             <span>{format(parseISO(request.createdAt), 'PPp', { locale: es })}</span>
@@ -170,11 +219,15 @@ const RepairRow = ({
           </Select>
         </TableCell>
          <TableCell className="text-right">
+           <Button variant="ghost" size="icon" onClick={() => onOpenNotes(request)}>
+               <MessageSquare className="h-4 w-4 text-muted-foreground" />
+               <span className="sr-only">Notas</span>
+           </Button>
            <Button variant="ghost" size="icon" onClick={() => onEdit(request)}>
               <Pencil className="h-4 w-4" />
               <span className="sr-only">Editar</span>
            </Button>
-           <Button variant="ghost" size="icon" onClick={() => onPrint({...request, devices: [device] })}>
+           <Button variant="ghost" size="icon" onClick={() => onPrint(request)}>
               <Printer className="h-4 w-4" />
               <span className="sr-only">Imprimir Ticket</span>
            </Button>
@@ -183,7 +236,9 @@ const RepairRow = ({
       {isOpen && (
           <TableRow className="bg-muted/50">
               <TableCell colSpan={8} className="p-2 sm:p-4 space-y-4">
-                <DeviceDetails device={device} catalog={catalog} request={request}/>
+                 {request.devices.map(device => (
+                    <DeviceDetails key={device.id} device={device} catalog={catalog} request={request}/>
+                 ))}
               </TableCell>
           </TableRow>
       )}
@@ -196,6 +251,7 @@ export function RepairList({
   requests, setRequests, catalog, updateCatalogState, onPrintRequest, onUpdateRequest
 }: RepairListProps) {
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
+  const [notesRequest, setNotesRequest] = useState<RepairRequest | null>(null);
   const { toast } = useToast();
   
   const handleStatusChange = async (requestId: string, newStatus: RepairStatus, devices: DeviceInRequest[]) => {
@@ -205,13 +261,15 @@ export function RepairList({
       setRequests(prevRequests =>
         prevRequests.map(req => {
           if (req.id === requestId) {
-            const updatedReq = { 
+            const updatedReq: RepairRequest = { 
                 ...req, 
                 status: newStatus, 
                 updatedAt: new Date().toISOString() 
             };
-            if (newStatus === 'Entregado') {
+            if (newStatus === 'Entregado' || newStatus === 'Entregado (no reparado)') {
                 updatedReq.deliveryDate = new Date().toISOString();
+            }
+            if (newStatus === 'Entregado') {
                 updatedReq.devices = req.devices.map(d => ({ ...d, downPayment: d.quote }));
             }
             return updatedReq;
@@ -234,39 +292,49 @@ export function RepairList({
       });
     }
   };
+
+  const handleSaveNotes = async (notes: string) => {
+      if (!notesRequest) return;
+      await updateRepairRequestNotes(notesRequest.id, notes);
+      setRequests(prev => prev.map(r => r.id === notesRequest.id ? {...r, notes, updatedAt: new Date().toISOString()} : r));
+  };
   
   const handleEdit = (request: RepairRequest) => {
     setEditingRequest(request);
   }
   
-  const allDevicesInRequests = requests.flatMap(req => 
-      (req.devices && req.devices.length > 0 ? req.devices : [{}] as DeviceInRequest[]).map((dev, index) => ({
-          request: req,
-          device: dev,
-          deviceIndex: index,
-          totalDevices: req.devices.length,
-      }))
-  );
-
+  const handleOpenNotes = (request: RepairRequest) => {
+    setNotesRequest(request);
+  }
 
   return (
     <div className="space-y-6">
+      <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Editar Solicitud de Reparación (Folio: {String(editingRequest?.folio).padStart(4, '0')})</DialogTitle>
+          </DialogHeader>
+          <RepairRequestForm
+              catalog={catalog}
+              updateCatalogState={updateCatalogState}
+              onAddRequest={() => {}} // Not used in edit mode
+              onUpdateRequest={onUpdateRequest}
+              initialData={editingRequest}
+              onFormClose={() => setEditingRequest(null)}
+          />
+        </DialogContent>
+      </Dialog>
+      
+      {notesRequest && (
+        <NotesModal 
+            isOpen={!!notesRequest}
+            onClose={() => setNotesRequest(null)}
+            request={notesRequest}
+            onSave={handleSaveNotes}
+        />
+      )}
+
       <div className="rounded-md border">
-        <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-            <DialogHeader>
-              <DialogTitle>Editar Solicitud de Reparación (Folio: {String(editingRequest?.folio).padStart(4, '0')})</DialogTitle>
-            </DialogHeader>
-            <RepairRequestForm
-                catalog={catalog}
-                updateCatalogState={updateCatalogState}
-                onAddRequest={() => {}} // Not used in edit mode
-                onUpdateRequest={onUpdateRequest}
-                initialData={editingRequest}
-                onFormClose={() => setEditingRequest(null)}
-            />
-          </DialogContent>
-        </Dialog>
         <div className="w-full overflow-x-auto">
           <Table>
             <TableHeader>
@@ -283,18 +351,16 @@ export function RepairList({
             </TableHeader>
             
             <TableBody>
-                {allDevicesInRequests.length > 0 ? (
-                  allDevicesInRequests.map(({ request, device, deviceIndex, totalDevices }) => (
+                {requests.length > 0 ? (
+                  requests.map((request) => (
                     <RepairRow 
-                      key={device.id || `${request.id}-${deviceIndex}`}
+                      key={request.id}
                       request={request}
-                      device={device}
-                      deviceIndex={deviceIndex}
-                      totalDevices={totalDevices}
                       catalog={catalog}
                       onStatusChange={handleStatusChange}
                       onEdit={handleEdit}
                       onPrint={onPrintRequest}
+                      onOpenNotes={handleOpenNotes}
                     />
                   ))
                 ) : (
