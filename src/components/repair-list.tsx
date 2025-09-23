@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Select,
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { RepairRequest, RepairStatus, CatalogData, DeviceInRequest } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
@@ -162,7 +163,7 @@ const RepairRow = ({
 }: {
   request: RepairRequest;
   catalog: CatalogData;
-  onStatusChange: (requestId: string, newStatus: RepairStatus, devices: DeviceInRequest[]) => void;
+  onStatusChange: (request: RepairRequest, newStatus: RepairStatus) => void;
   onEdit: (request: RepairRequest) => void;
   onPrint: (request: RepairRequest) => void;
   onOpenNotes: (request: RepairRequest) => void;
@@ -188,7 +189,7 @@ const RepairRow = ({
         <TableCell className="hidden md:table-cell">{request.phoneNumbers[0]?.value || 'N/A'}</TableCell>
         <TableCell>{deviceDescription}</TableCell>
         <TableCell className="hidden sm:table-cell">
-          <div className="flex flex-col">
+          <div className="flex flex-col text-sm">
             <span>{format(parseISO(request.createdAt), 'PPp', { locale: es })}</span>
             {request.deliveryDate && (
                 <span className="text-xs text-green-600">Entregado: {format(parseISO(request.deliveryDate), 'PPp', { locale: es })}</span>
@@ -201,7 +202,7 @@ const RepairRow = ({
         <TableCell>
           <Select
             value={request.status}
-            onValueChange={(newStatus: RepairStatus) => onStatusChange(request.id, newStatus, request.devices)}
+            onValueChange={(newStatus: RepairStatus) => onStatusChange(request, newStatus)}
           >
             <SelectTrigger className="w-[180px]">
               <div className="flex items-center gap-2">
@@ -252,15 +253,22 @@ export function RepairList({
 }: RepairListProps) {
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
   const [notesRequest, setNotesRequest] = useState<RepairRequest | null>(null);
+  const [confirmDelivery, setConfirmDelivery] = useState<{request: RepairRequest, newStatus: RepairStatus} | null>(null);
   const { toast } = useToast();
+
+  const handleConfirmDelivery = async () => {
+    if (!confirmDelivery) return;
+    await handleStatusChange(confirmDelivery.request, confirmDelivery.newStatus);
+    setConfirmDelivery(null);
+  };
   
-  const handleStatusChange = async (requestId: string, newStatus: RepairStatus, devices: DeviceInRequest[]) => {
+  const handleStatusChange = async (request: RepairRequest, newStatus: RepairStatus) => {
     try {
-      await updateRepairRequestStatus(requestId, newStatus, devices);
+      await updateRepairRequestStatus(request.id, newStatus, request.devices);
       
       setRequests(prevRequests =>
         prevRequests.map(req => {
-          if (req.id === requestId) {
+          if (req.id === request.id) {
             const updatedReq: RepairRequest = { 
                 ...req, 
                 status: newStatus, 
@@ -280,7 +288,7 @@ export function RepairList({
       
       toast({
         title: "Estatus Actualizado",
-        description: `El estatus del folio #${String(requests.find(r=>r.id===requestId)?.folio).padStart(4, '0')} ha sido cambiado a "${newStatus}".`,
+        description: `El estatus del folio #${String(request.folio).padStart(4, '0')} ha sido cambiado a "${newStatus}".`,
         variant: "success"
       });
     } catch (error) {
@@ -290,6 +298,14 @@ export function RepairList({
         description: "No se pudo actualizar el estatus.",
         variant: "destructive"
       });
+    }
+  };
+  
+  const promptForDeliveryConfirmation = (request: RepairRequest, newStatus: RepairStatus) => {
+    if (newStatus === 'Entregado') {
+        setConfirmDelivery({ request, newStatus });
+    } else {
+        handleStatusChange(request, newStatus);
     }
   };
 
@@ -306,6 +322,21 @@ export function RepairList({
   const handleOpenNotes = (request: RepairRequest) => {
     setNotesRequest(request);
   }
+
+  const deliveryDialogData = useMemo(() => {
+    if (!confirmDelivery) return null;
+    const { request } = confirmDelivery;
+    const totalQuote = request.devices.reduce((acc, dev) => acc + (dev.quote || 0), 0);
+    const totalDownPayment = request.devices.reduce((acc, dev) => acc + (dev.downPayment || 0), 0);
+    const totalRemaining = totalQuote - totalDownPayment;
+    return {
+      folio: String(request.folio).padStart(4, '0'),
+      clientName: request.clientName,
+      totalQuote: totalQuote.toFixed(2),
+      totalDownPayment: totalDownPayment.toFixed(2),
+      totalRemaining: totalRemaining.toFixed(2),
+    };
+  }, [confirmDelivery]);
 
   return (
     <div className="space-y-6">
@@ -334,6 +365,30 @@ export function RepairList({
         />
       )}
 
+      {deliveryDialogData && (
+        <AlertDialog open={!!confirmDelivery} onOpenChange={() => setConfirmDelivery(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Entrega - Folio #{deliveryDialogData.folio}</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se marcará la reparación para <strong>{deliveryDialogData.clientName}</strong> como "Entregado".
+                Por favor, verifica el cobro final.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="my-4 text-sm space-y-2">
+                <div className="flex justify-between"><span>Cotización Total:</span> <span>${deliveryDialogData.totalQuote}</span></div>
+                <div className="flex justify-between"><span>Anticipo Recibido:</span> <span>${deliveryDialogData.totalDownPayment}</span></div>
+                <hr className="border-dashed"/>
+                <div className="flex justify-between font-bold text-lg"><span>Monto Restante a Cobrar:</span> <span className="text-green-600">${deliveryDialogData.totalRemaining}</span></div>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDelivery} className="bg-primary">Confirmar Entrega</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
       <div className="rounded-md border">
         <div className="w-full overflow-x-auto">
           <Table>
@@ -344,7 +399,7 @@ export function RepairList({
                 <TableHead>Cliente</TableHead>
                 <TableHead className="hidden md:table-cell">Teléfono</TableHead>
                 <TableHead>Dispositivo(s)</TableHead>
-                <TableHead className="hidden sm:table-cell">Fecha</TableHead>
+                <TableHead className="hidden sm:table-cell w-48">Fecha</TableHead>
                 <TableHead>Estatus</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -357,7 +412,7 @@ export function RepairList({
                       key={request.id}
                       request={request}
                       catalog={catalog}
-                      onStatusChange={handleStatusChange}
+                      onStatusChange={promptForDeliveryConfirmation}
                       onEdit={handleEdit}
                       onPrint={onPrintRequest}
                       onOpenNotes={handleOpenNotes}
