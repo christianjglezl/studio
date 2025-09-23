@@ -432,10 +432,10 @@ export function RepairList({
               </AlertDialogHeader>
               <div className="my-4 text-sm space-y-4">
                   <div className="space-y-2">
-                    <p className="flex justify-between"><span>Tarifa de Revisión:</span> <strong>${noRepairDialogData.revisionFee}</strong></p>
-                    <p className="flex justify-between"><span>Anticipo Registrado:</span> <strong>${noRepairDialogData.totalDownPayment}</strong></p>
-                    <hr className="border-dashed"/>
-                    <p className="flex justify-between font-bold text-lg"><span>Monto a Cobrar:</span> <span className="text-orange-600">${noRepairDialogData.amountToCollect}</span></p>
+                    <div className="flex justify-between"><span>Tarifa de Revisión:</span> <strong>${noRepairDialogData.revisionFee}</strong></div>
+                    <div className="flex justify-between"><span>Anticipo Registrado:</span> <strong>${noRepairDialogData.totalDownPayment}</strong></div>
+                    <hr className="border-dashed my-1"/>
+                    <div className="flex justify-between font-bold text-lg"><span>Monto a Cobrar:</span> <span className="text-orange-600">${noRepairDialogData.amountToCollect}</span></div>
                   </div>
                   <p className="text-xs text-muted-foreground">Si el anticipo es mayor a la revisión, no se cobrará nada adicional.</p>
               </div>
