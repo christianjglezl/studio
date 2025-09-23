@@ -20,7 +20,7 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ChevronDown, Pencil, Printer, Smartphone, MessageSquare } from 'lucide-react';
 import { RepairRequestForm } from './repair-request-form';
-import { updateRepairRequestStatus, updateRepairRequestNotes } from '@/services/firestore';
+import { updateRepairRequestStatus, updateRepairRequestNotes, updateRepairRequestWithRevisionFee } from '@/services/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -204,7 +204,7 @@ const RepairRow = ({
             value={request.status}
             onValueChange={(newStatus: RepairStatus) => onStatusChange(request, newStatus)}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full min-w-[180px]">
               <div className="flex items-center gap-2">
                 <span className={cn('h-2.5 w-2.5 rounded-full', statusColors[request.status])} />
                 <SelectValue />
@@ -254,17 +254,17 @@ export function RepairList({
   const [editingRequest, setEditingRequest] = useState<RepairRequest | null>(null);
   const [notesRequest, setNotesRequest] = useState<RepairRequest | null>(null);
   const [confirmDelivery, setConfirmDelivery] = useState<{request: RepairRequest, newStatus: RepairStatus} | null>(null);
-  const { toast } = useToast();
+  const [confirmNoRepairDelivery, setConfirmNoRepairDelivery] = useState<{request: RepairRequest, newStatus: RepairStatus} | null>(null);
 
-  const handleConfirmDelivery = async () => {
-    if (!confirmDelivery) return;
-    await handleStatusChange(confirmDelivery.request, confirmDelivery.newStatus);
-    setConfirmDelivery(null);
-  };
+  const { toast } = useToast();
   
-  const handleStatusChange = async (request: RepairRequest, newStatus: RepairStatus) => {
+  const handleStatusChange = async (request: RepairRequest, newStatus: RepairStatus, chargeRevisionFee: boolean = false) => {
     try {
-      await updateRepairRequestStatus(request.id, newStatus, request.devices);
+      if (chargeRevisionFee) {
+        await updateRepairRequestWithRevisionFee(request.id, 80);
+      } else {
+        await updateRepairRequestStatus(request.id, newStatus, request.devices);
+      }
       
       setRequests(prevRequests =>
         prevRequests.map(req => {
@@ -272,13 +272,15 @@ export function RepairList({
             const updatedReq: RepairRequest = { 
                 ...req, 
                 status: newStatus, 
-                updatedAt: new Date().toISOString() 
+                updatedAt: new Date().toISOString(),
+                deliveryDate: new Date().toISOString()
             };
-            if (newStatus === 'Entregado' || newStatus === 'Entregado (no reparado)') {
-                updatedReq.deliveryDate = new Date().toISOString();
-            }
             if (newStatus === 'Entregado') {
                 updatedReq.devices = req.devices.map(d => ({ ...d, downPayment: d.quote }));
+            }
+            if (chargeRevisionFee && updatedReq.devices.length > 0) {
+              const firstDevice = { ...updatedReq.devices[0], quote: 80, downPayment: 80 };
+              updatedReq.devices = [firstDevice, ...updatedReq.devices.slice(1)];
             }
             return updatedReq;
           }
@@ -301,13 +303,27 @@ export function RepairList({
     }
   };
   
-  const promptForDeliveryConfirmation = (request: RepairRequest, newStatus: RepairStatus) => {
+  const promptForConfirmation = (request: RepairRequest, newStatus: RepairStatus) => {
     if (newStatus === 'Entregado') {
         setConfirmDelivery({ request, newStatus });
+    } else if (newStatus === 'Entregado (no reparado)') {
+        setConfirmNoRepairDelivery({ request, newStatus });
     } else {
         handleStatusChange(request, newStatus);
     }
   };
+
+  const handleConfirmDelivery = async () => {
+    if (!confirmDelivery) return;
+    await handleStatusChange(confirmDelivery.request, confirmDelivery.newStatus);
+    setConfirmDelivery(null);
+  };
+
+  const handleConfirmNoRepair = async (chargeFee: boolean) => {
+    if (!confirmNoRepairDelivery) return;
+    await handleStatusChange(confirmNoRepairDelivery.request, confirmNoRepairDelivery.newStatus, chargeFee);
+    setConfirmNoRepairDelivery(null);
+  }
 
   const handleSaveNotes = async (notes: string) => {
       if (!notesRequest) return;
@@ -337,6 +353,22 @@ export function RepairList({
       totalRemaining: totalRemaining.toFixed(2),
     };
   }, [confirmDelivery]);
+
+  const noRepairDialogData = useMemo(() => {
+    if (!confirmNoRepairDelivery) return null;
+    const { request } = confirmNoRepairDelivery;
+    const totalDownPayment = request.devices.reduce((acc, dev) => acc + (dev.downPayment || 0), 0);
+    const revisionFee = 80;
+    const amountToCollect = Math.max(0, revisionFee - totalDownPayment);
+
+    return {
+        folio: String(request.folio).padStart(4, '0'),
+        clientName: request.clientName,
+        totalDownPayment: totalDownPayment.toFixed(2),
+        revisionFee: revisionFee.toFixed(2),
+        amountToCollect: amountToCollect.toFixed(2),
+    };
+  }, [confirmNoRepairDelivery]);
 
   return (
     <div className="space-y-6">
@@ -389,6 +421,31 @@ export function RepairList({
         </AlertDialog>
       )}
 
+      {noRepairDialogData && (
+          <AlertDialog open={!!confirmNoRepairDelivery} onOpenChange={() => setConfirmNoRepairDelivery(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar Entrega (Sin Reparación) - Folio #{noRepairDialogData.folio}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  El dispositivo para <strong>{noRepairDialogData.clientName}</strong> se entregará sin reparar. ¿Deseas cobrar la tarifa de revisión?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="my-4 text-sm space-y-2">
+                  <p>Tarifa de Revisión: <strong>${noRepairDialogData.revisionFee}</strong></p>
+                  <p>Anticipo Registrado: <strong>${noRepairDialogData.totalDownPayment}</strong></p>
+                  <hr className="border-dashed"/>
+                  <p className="flex justify-between font-bold text-lg"><span>Monto a Cobrar:</span> <span className="text-orange-600">${noRepairDialogData.amountToCollect}</span></p>
+                  <p className="text-xs text-muted-foreground">Si el anticipo es mayor a la revisión, no se cobrará nada adicional.</p>
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <Button variant="secondary" onClick={() => handleConfirmNoRepair(false)}>No Cobrar y Entregar</Button>
+                <AlertDialogAction onClick={() => handleConfirmNoRepair(true)}>Cobrar ${noRepairDialogData.revisionFee} y Entregar</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+      )}
+
       <div className="rounded-md border">
         <div className="w-full overflow-x-auto">
           <Table>
@@ -412,7 +469,7 @@ export function RepairList({
                       key={request.id}
                       request={request}
                       catalog={catalog}
-                      onStatusChange={promptForDeliveryConfirmation}
+                      onStatusChange={promptForConfirmation}
                       onEdit={handleEdit}
                       onPrint={onPrintRequest}
                       onOpenNotes={handleOpenNotes}

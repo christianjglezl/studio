@@ -106,7 +106,7 @@ export const updateRepairRequestStatus = async (id: string, status: RepairStatus
     const requestRef = doc(db, 'repairRequests', id);
     const batch = writeBatch(db);
 
-    const updateData: Partial<Omit<RepairRequest, 'id'|'devices'>> & { updatedAt: any } = {
+    const updateData: { [key: string]: any } = {
         status: status,
         updatedAt: serverTimestamp(),
     };
@@ -130,6 +130,33 @@ export const updateRepairRequestStatus = async (id: string, status: RepairStatus
 
     await batch.commit();
 };
+
+export const updateRepairRequestWithRevisionFee = async (id: string, fee: number): Promise<void> => {
+    const requestRef = doc(db, 'repairRequests', id);
+    const batch = writeBatch(db);
+
+    const updateData = {
+        status: 'Entregado (no reparado)',
+        updatedAt: serverTimestamp(),
+        deliveryDate: serverTimestamp(),
+    };
+    batch.update(requestRef, updateData);
+
+    const devicesSnapshot = await getDocs(collection(db, `repairRequests/${id}/devices`));
+    if (!devicesSnapshot.empty) {
+        const firstDeviceDoc = devicesSnapshot.docs[0];
+        const deviceRef = doc(db, `repairRequests/${id}/devices`, firstDeviceDoc.id);
+        
+        // The quote becomes the revision fee, and we mark it as fully paid.
+        batch.update(deviceRef, {
+            quote: fee,
+            downPayment: fee,
+        });
+    }
+
+    await batch.commit();
+};
+
 
 export const updateRepairRequestNotes = async (id: string, notes: string): Promise<void> => {
     const requestRef = doc(db, 'repairRequests', id);
