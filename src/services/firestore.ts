@@ -189,3 +189,22 @@ export const updateRepairRequestWithDevices = async (id: string, data: Omit<Repa
     
     await batch.commit();
 }
+
+
+export const deleteRepairRequest = async (requestId: string): Promise<void> => {
+    const batch = writeBatch(db);
+    
+    // 1. Delete all devices in the subcollection
+    const devicesRef = collection(db, `repairRequests/${requestId}/devices`);
+    const devicesSnapshot = await getDocs(devicesRef);
+    devicesSnapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+
+    // 2. Delete the main repair request document
+    const requestRef = doc(db, 'repairRequests', requestId);
+    batch.delete(requestRef);
+
+    // 3. Commit the batch
+    await batch.commit();
+};

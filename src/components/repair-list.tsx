@@ -12,15 +12,15 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import type { RepairRequest, RepairStatus, CatalogData, DeviceInRequest } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { ChevronDown, Pencil, Printer, Smartphone, MessageSquare, Search } from 'lucide-react';
+import { ChevronDown, Pencil, Printer, Smartphone, MessageSquare, Search, Trash2 } from 'lucide-react';
 import { RepairRequestForm } from './repair-request-form';
-import { updateRepairRequestStatus, updateRepairRequestNotes, updateRepairRequestWithRevisionFee } from '@/services/firestore';
+import { updateRepairRequestStatus, updateRepairRequestNotes, updateRepairRequestWithRevisionFee, deleteRepairRequest } from '@/services/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -162,7 +162,7 @@ const NotesModal = ({
 const RepairRow = ({ 
   request,
   catalog,
-  onStatusChange, onEdit, onPrint, onOpenNotes
+  onStatusChange, onEdit, onPrint, onOpenNotes, onDelete
 }: {
   request: RepairRequest;
   catalog: CatalogData;
@@ -170,6 +170,7 @@ const RepairRow = ({
   onEdit: (request: RepairRequest) => void;
   onPrint: (request: RepairRequest) => void;
   onOpenNotes: (request: RepairRequest) => void;
+  onDelete: (request: RepairRequest) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { brands, models } = catalog;
@@ -236,6 +237,26 @@ const RepairRow = ({
               <Printer className="h-4 w-4" />
               <span className="sr-only">Imprimir Ticket</span>
            </Button>
+           <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <span className="sr-only">Eliminar</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acción no se puede deshacer. Se eliminará permanentemente la solicitud de reparación con folio #{String(request.folio).padStart(4, '0')} y todos sus datos asociados.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onDelete(request)} className="bg-destructive hover:bg-destructive/90">Sí, eliminar</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
         </TableCell>
       </TableRow>
       {isOpen && (
@@ -370,6 +391,24 @@ export function RepairList({
   const handleOpenNotes = (request: RepairRequest) => {
     setNotesRequest(request);
   }
+
+  const handleDeleteRequest = async (requestToDelete: RepairRequest) => {
+    try {
+        await deleteRepairRequest(requestToDelete.id);
+        setRequests(prev => prev.filter(r => r.id !== requestToDelete.id));
+        toast({
+            title: "Registro Eliminado",
+            description: `La solicitud con folio #${String(requestToDelete.folio).padStart(4, '0')} ha sido eliminada.`,
+            variant: "success",
+        });
+    } catch (error: any) {
+        toast({
+            title: "Error al Eliminar",
+            description: `No se pudo eliminar el registro: ${error.message}`,
+            variant: "destructive",
+        });
+    }
+  };
 
   const deliveryDialogData = useMemo(() => {
     if (!confirmDelivery) return null;
@@ -520,6 +559,7 @@ export function RepairList({
                       onEdit={handleEdit}
                       onPrint={onPrintRequest}
                       onOpenNotes={handleOpenNotes}
+                      onDelete={handleDeleteRequest}
                     />
                   ))
                 ) : (
