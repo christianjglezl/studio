@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Select,
@@ -18,13 +18,14 @@ import { repairStatuses } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { ChevronDown, Pencil, Printer, Smartphone, MessageSquare } from 'lucide-react';
+import { ChevronDown, Pencil, Printer, Smartphone, MessageSquare, Search } from 'lucide-react';
 import { RepairRequestForm } from './repair-request-form';
 import { updateRepairRequestStatus, updateRepairRequestNotes, updateRepairRequestWithRevisionFee } from '@/services/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 interface RepairListProps {
   requests: RepairRequest[];
@@ -34,6 +35,8 @@ interface RepairListProps {
   onPrintRequest: (request: RepairRequest) => void;
   onUpdateRequest: (id: string, data: Omit<RepairRequest, 'id' | 'status' | 'folio' | 'createdAt'>) => Promise<void>;
 }
+
+const ITEMS_PER_PAGE = 10;
 
 const statusColors: { [key in RepairStatus]: string } = {
   Ingresado: 'bg-blue-500',
@@ -256,7 +259,35 @@ export function RepairList({
   const [confirmDelivery, setConfirmDelivery] = useState<{request: RepairRequest, newStatus: RepairStatus} | null>(null);
   const [confirmNoRepairDelivery, setConfirmNoRepairDelivery] = useState<{request: RepairRequest, newStatus: RepairStatus} | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
   const { toast } = useToast();
+
+  const filteredRequests = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    if (!query) return requests;
+    
+    return requests.filter(req => {
+      const { brands, models } = catalog;
+      const deviceDescription = req.devices.map(device => 
+        `${getEntityName(device.brandId, brands)} ${getEntityName(device.modelId, models)}`
+      ).join(' ').toLowerCase();
+
+      return (
+        String(req.folio).padStart(4, '0').includes(query) ||
+        req.clientName.toLowerCase().includes(query) ||
+        deviceDescription.includes(query)
+      );
+    });
+  }, [requests, searchQuery, catalog]);
+
+  const paginatedRequests = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredRequests.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredRequests, currentPage]);
+
+  const totalPages = Math.ceil(filteredRequests.length / ITEMS_PER_PAGE);
   
   const handleStatusChange = async (request: RepairRequest, newStatus: RepairStatus, chargeRevisionFee: boolean = false) => {
     try {
@@ -372,6 +403,19 @@ export function RepairList({
 
   return (
     <div className="space-y-6">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por folio, cliente o dispositivo..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1); // Reset to first page on new search
+          }}
+          className="pl-10"
+        />
+      </div>
+      
       <Dialog open={!!editingRequest} onOpenChange={(open) => !open && setEditingRequest(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
@@ -465,8 +509,8 @@ export function RepairList({
             </TableHeader>
             
             <TableBody>
-                {requests.length > 0 ? (
-                  requests.map((request) => (
+                {paginatedRequests.length > 0 ? (
+                  paginatedRequests.map((request) => (
                     <RepairRow 
                       key={request.id}
                       request={request}
@@ -480,7 +524,7 @@ export function RepairList({
                 ) : (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
-                        No hay solicitudes de reparación registradas.
+                        No se encontraron solicitudes de reparación.
                       </TableCell>
                     </TableRow>
                 )}
@@ -488,6 +532,32 @@ export function RepairList({
           </Table>
         </div>
       </div>
+      
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+                Página {currentPage} de {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                >
+                    Anterior
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                >
+                    Siguiente
+                </Button>
+            </div>
+        </div>
+      )}
     </div>
   );
 }
