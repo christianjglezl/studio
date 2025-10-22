@@ -178,6 +178,8 @@ const RepairRow = ({
     `${getEntityName(device.brandId, brands)} ${getEntityName(device.modelId, models)}`
   ).join('; ');
 
+  const isDelivered = request.status === 'Entregado' || request.status === 'Entregado (no reparado)';
+
   return (
     <>
       <TableRow className="align-middle">
@@ -194,11 +196,10 @@ const RepairRow = ({
         <TableCell className="hidden sm:table-cell">
           <div className="flex flex-col text-sm">
             <span>{format(parseISO(request.createdAt), 'PPp', { locale: es })}</span>
-            {request.deliveryDate && (
-                <span className="text-xs text-green-600">Entregado: {format(parseISO(request.deliveryDate), 'PPp', { locale: es })}</span>
-            )}
-            {request.updatedAt && !request.deliveryDate && (
-                 <span className="text-xs text-muted-foreground">Act: {format(parseISO(request.updatedAt), 'PPp', { locale: es })}</span>
+            {isDelivered && request.deliveryDate ? (
+                <span className="text-xs text-green-600 font-medium">Entregado: {format(parseISO(request.deliveryDate), 'PPp', { locale: es })}</span>
+            ) : request.updatedAt && (
+                 <span className="text-xs text-muted-foreground">Actualizado: {format(parseISO(request.updatedAt), 'PPp', { locale: es })}</span>
             )}
           </div>
         </TableCell>
