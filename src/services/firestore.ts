@@ -1,10 +1,10 @@
 
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, writeBatch, serverTimestamp, getDoc, runTransaction } from 'firebase/firestore';
-import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition, RepairRequest, DeviceInRequest, CatalogData, RepairStatus } from '@/lib/types';
+import type { Brand, Model, Color, Accessory, Condition, Service, TermAndCondition, RepairRequest, DeviceInRequest, CatalogData, RepairStatus, SparePartType, SparePart } from '@/lib/types';
 
 // This is a generic type for items in our catalog collections
-type CollectionType = Brand | Model | Color | Accessory | Condition | Service | TermAndCondition;
+type CollectionType = Brand | Model | Color | Accessory | Condition | Service | TermAndCondition | SparePartType | SparePart;
 
 // Generic Functions for Catalog Management
 export const getCollection = async <T extends { name?: string, text?: string }>(collectionName: keyof CatalogData): Promise<T[]> => {
@@ -12,7 +12,7 @@ export const getCollection = async <T extends { name?: string, text?: string }>(
     const querySnapshot = await getDocs(q);
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
 
-    // Client-side sorting to avoid complex Firestore indexes for now
+    // Client-side sorting for items with names/text
     data.sort((a, b) => {
         const nameA = a.name || a.text || '';
         const nameB = b.name || b.text || '';
@@ -23,15 +23,12 @@ export const getCollection = async <T extends { name?: string, text?: string }>(
 };
 
 export const addItem = async (collectionName: keyof CatalogData, item: Omit<CollectionType, 'id'>): Promise<string> => {
-    // This is the simplest and most direct way to add a document.
-    // The `item` object is passed directly.
     const docRef = await addDoc(collection(db, collectionName), item);
     return docRef.id;
 };
 
 export const updateItem = async (collectionName: keyof CatalogData, id: string, item: Partial<Omit<CollectionType, 'id'>>): Promise<void> => {
     const docRef = doc(db, collectionName, id);
-    // This is the correct way to update a document with new data.
     await updateDoc(docRef, item);
 };
 
@@ -74,7 +71,6 @@ export const addRepairRequest = async (requestData: Omit<RepairRequest, 'id' | '
         if (counterSnap.exists()) {
             nextFolio = counterSnap.data().currentFolio + 1;
         } else {
-            // Initialize the counter if it doesn't exist.
             transaction.set(counterRef, { currentFolio: 1 });
         }
         transaction.update(counterRef, { currentFolio: nextFolio });
@@ -92,7 +88,6 @@ export const addRepairRequest = async (requestData: Omit<RepairRequest, 'id' | '
         });
 
         devices.forEach(device => {
-            // Assign a new random ID if the device doesn't have one
             const deviceId = device.id || doc(collection(db, 'id')).id;
             const deviceRef = doc(db, `repairRequests/${newRequestRef.id}/devices`, deviceId);
             transaction.set(deviceRef, { ...device, id: deviceId });
@@ -115,19 +110,16 @@ export const updateRepairRequestStatus = async (id: string, status: RepairStatus
         updateData.deliveryDate = serverTimestamp();
     }
     
-    // Only zero out balance if it was a successful repair
     if (status === 'Entregado') {
         devices.forEach(device => {
             if (device.id) {
                 const deviceRef = doc(db, `repairRequests/${id}/devices`, device.id);
-                // Set downPayment to quote to make remaining 0
                 batch.update(deviceRef, { downPayment: device.quote });
             }
         });
     }
 
     batch.update(requestRef, updateData);
-
     await batch.commit();
 };
 
@@ -146,8 +138,6 @@ export const updateRepairRequestWithRevisionFee = async (id: string, fee: number
     if (!devicesSnapshot.empty) {
         const firstDeviceDoc = devicesSnapshot.docs[0];
         const deviceRef = doc(db, `repairRequests/${id}/devices`, firstDeviceDoc.id);
-        
-        // The quote becomes the revision fee, and we mark it as fully paid.
         batch.update(deviceRef, {
             quote: fee,
             downPayment: fee,
@@ -169,20 +159,13 @@ export const updateRepairRequestNotes = async (id: string, notes: string): Promi
 export const updateRepairRequestWithDevices = async (id: string, data: Omit<RepairRequest, 'id' | 'folio' | 'createdAt' | 'status'>) => {
     const batch = writeBatch(db);
     const requestRef = doc(db, 'repairRequests', id);
-
     const { devices, ...requestData } = data;
-    
     const finalRequestData: Partial<Omit<RepairRequest, 'id'|'devices'>> & { updatedAt: any } = {...requestData, updatedAt: serverTimestamp()};
-
     batch.update(requestRef, finalRequestData);
 
     devices.forEach(device => {
-        if (!device.id) {
-            console.error("Device missing ID, cannot update:", device);
-            return;
-        }
+        if (!device.id) return;
         const deviceRef = doc(db, `repairRequests/${id}/devices`, device.id);
-        
         const { id: deviceId, ...deviceData } = device;
         batch.update(deviceRef, deviceData);
     });
@@ -193,18 +176,12 @@ export const updateRepairRequestWithDevices = async (id: string, data: Omit<Repa
 
 export const deleteRepairRequest = async (requestId: string): Promise<void> => {
     const batch = writeBatch(db);
-    
-    // 1. Delete all devices in the subcollection
     const devicesRef = collection(db, `repairRequests/${requestId}/devices`);
     const devicesSnapshot = await getDocs(devicesRef);
     devicesSnapshot.forEach(doc => {
         batch.delete(doc.ref);
     });
-
-    // 2. Delete the main repair request document
     const requestRef = doc(db, 'repairRequests', requestId);
     batch.delete(requestRef);
-
-    // 3. Commit the batch
     await batch.commit();
 };

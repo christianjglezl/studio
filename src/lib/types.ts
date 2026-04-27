@@ -35,6 +35,21 @@ export interface TermAndCondition {
   text: string;
 }
 
+export interface SparePartType {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+export interface SparePart {
+  id: string;
+  typeId: string;
+  brandId: string;
+  modelId: string;
+  quantity: number;
+  description?: string;
+}
+
 export type RepairStatus = 'Ingresado' | 'En Revisión' | 'En Reparación' | 'Reparado' | 'Listo para Entrega' | 'Entregado' | 'Sin reparación' | 'Entregado (no reparado)';
 
 export const repairStatuses: RepairStatus[] = ['Ingresado', 'En Revisión', 'En Reparación', 'Reparado', 'Listo para Entrega', 'Sin reparación', 'Entregado', 'Entregado (no reparado)'];
@@ -79,4 +94,6 @@ export interface CatalogData {
   conditions: Condition[];
   services: Service[];
   terms: TermAndCondition[];
+  sparePartTypes: SparePartType[];
+  spareParts: SparePart[];
 }

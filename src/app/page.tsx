@@ -2,13 +2,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { HardDrive, Wrench, List, LogOut, LineChart } from 'lucide-react';
+import { HardDrive, Wrench, List, LogOut, LineChart, PackageSearch } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RepairRequestForm } from '@/components/repair-request-form';
 import { CatalogManager } from '@/components/catalog-manager';
 import { RepairList } from '@/components/repair-list';
-import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, CatalogData, TermAndCondition } from '@/lib/types';
+import { InventoryManager } from '@/components/inventory-manager';
+import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, CatalogData, TermAndCondition, SparePartType, SparePart } from '@/lib/types';
 import { Ticket } from '@/components/ticket';
 import { getCollection, addItem, updateItem, deleteItem, addRepairRequest, getRepairRequests, updateRepairRequest, updateRepairRequestWithDevices } from '@/services/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,7 +31,8 @@ function AppScreen() {
   
   const [catalog, setCatalog] = useState<CatalogData>({
     brands: [], models: [], colors: [], accessories: [],
-    conditions: [], services: [], terms: []
+    conditions: [], services: [], terms: [],
+    sparePartTypes: [], spareParts: []
   });
 
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
@@ -40,7 +42,8 @@ function AppScreen() {
     try {
       const [
         brands, models, colors, accessories, 
-        conditions, services, terms
+        conditions, services, terms,
+        sparePartTypes, spareParts
       ] = await Promise.all([
         getCollection<Brand>('brands'),
         getCollection<Model>('models'),
@@ -49,8 +52,14 @@ function AppScreen() {
         getCollection<Condition>('conditions'),
         getCollection<Service>('services'),
         getCollection<TermAndCondition>('terms'),
+        getCollection<SparePartType>('sparePartTypes'),
+        getCollection<SparePart>('spareParts'),
       ]);
-      setCatalog({ brands, models, colors, accessories, conditions, services, terms });
+      setCatalog({ 
+        brands, models, colors, accessories, 
+        conditions, services, terms,
+        sparePartTypes, spareParts 
+      });
     } catch (error: any) {
       console.error("Error fetching catalog data:", error);
       toast({
@@ -133,7 +142,7 @@ function AppScreen() {
   const updateCatalogState = (collectionName: keyof CatalogData, newItems: any[]) => {
     setCatalog(prev => ({
         ...prev,
-        [collectionName]: newItems.sort((a: any, b: any) => (a.name || a.text).localeCompare(b.name || b.text)),
+        [collectionName]: Array.isArray(newItems) ? newItems : [],
     }));
   };
 
@@ -141,10 +150,8 @@ function AppScreen() {
     try {
       const id = await addItem(collectionName, item);
       const newItem = { ...item, id };
-      
-      updateCatalogState(collectionName, [...catalog[collectionName], newItem]);
-
-      toast({ title: "Agregado", description: "El elemento se ha añadido al catálogo.", variant: "success" });
+      updateCatalogState(collectionName, [...(catalog[collectionName] || []), newItem]);
+      toast({ title: "Agregado", description: "El elemento se ha añadido correctamente.", variant: "success" });
     } catch (error: any) {
       console.error("Error adding item:", error);
       toast({ title: "Error al Guardar", description: `No se pudo añadir el elemento: ${error.message}`, variant: "destructive" });
@@ -154,11 +161,9 @@ function AppScreen() {
   const handleUpdateItem = async (collectionName: keyof CatalogData, id: string, item: any) => {
     try {
       await updateItem(collectionName, id, item);
-      
-      const updatedItems = catalog[collectionName].map((i: any) => i.id === id ? { ...i, ...item } : i)
+      const updatedItems = (catalog[collectionName] || []).map((i: any) => i.id === id ? { ...i, ...item } : i)
       updateCatalogState(collectionName, updatedItems);
-
-      toast({ title: "Actualizado", description: "El elemento del catálogo se ha actualizado.", variant: "success" });
+      toast({ title: "Actualizado", description: "El elemento se ha actualizado correctamente.", variant: "success" });
     } catch (error: any) {
       console.error("Error updating item:", error);
       toast({ title: "Error al Actualizar", description: `No se pudo actualizar el elemento: ${error.message}`, variant: "destructive" });
@@ -168,11 +173,9 @@ function AppScreen() {
   const handleDeleteItem = async (collectionName: keyof CatalogData, id: string) => {
     try {
       await deleteItem(collectionName, id);
-
-      const filteredItems = catalog[collectionName].filter((i: any) => i.id !== id);
+      const filteredItems = (catalog[collectionName] || []).filter((i: any) => i.id !== id);
       updateCatalogState(collectionName, filteredItems);
-
-      toast({ title: "Eliminado", description: "El elemento del catálogo ha sido eliminado.", variant: "success" });
+      toast({ title: "Eliminado", description: "El elemento ha sido eliminado.", variant: "success" });
     } catch (error: any) {
       console.error("Error deleting item:", error);
       toast({ title: "Error al Eliminar", description: `No se pudo eliminar el elemento: ${error.message}`, variant: "destructive" });
@@ -189,21 +192,11 @@ function AppScreen() {
               <Image src={LOGO_URL} alt="Easy Tech Logo" width={50} height={50} unoptimized />
               <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
             </div>
-            <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
           </header>
           <Skeleton className="h-10 w-full" />
           <Card>
-            <CardHeader>
-              <Skeleton className="h-8 w-1/2" />
-              <Skeleton className="h-4 w-3/4" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            </CardContent>
+            <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+            <CardContent><div className="space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-20 w-full" /></div></CardContent>
           </Card>
         </div>
       </div>
@@ -229,7 +222,7 @@ function AppScreen() {
           </header>
           
           <Tabs defaultValue="repair" className="w-full">
-            <TabsList className="h-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+            <TabsList className="h-auto grid grid-cols-2 md:grid-cols-5 gap-1 mb-8">
               <TabsTrigger value="repair">
                 <Wrench className="mr-2 h-4 w-4" />
                 Nueva Reparación
@@ -238,20 +231,24 @@ function AppScreen() {
                 <List className="mr-2 h-4 w-4" />
                 Reparaciones
               </TabsTrigger>
+              <TabsTrigger value="inventory">
+                <PackageSearch className="mr-2 h-4 w-4" />
+                Inventario
+              </TabsTrigger>
               <TabsTrigger value="dashboard">
                   <LineChart className="mr-2 h-4 w-4" />
                   Dashboard
               </TabsTrigger>
               <TabsTrigger value="catalog">
                 <HardDrive className="mr-2 h-4 w-4" />
-                Catálogos
+                Configuración
               </TabsTrigger>
             </TabsList>
+
             <TabsContent value="repair">
               <Card>
                 <CardHeader>
                   <CardTitle className="font-headline">Registrar Nuevo Dispositivo</CardTitle>
-                  <CardDescription>Completa el formulario para registrar un nuevo dispositivo para reparación.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <RepairRequestForm 
@@ -262,11 +259,11 @@ function AppScreen() {
                 </CardContent>
               </Card>
             </TabsContent>
+
             <TabsContent value="list">
               <Card>
                 <CardHeader>
                   <CardTitle className="font-headline">Lista de Reparaciones</CardTitle>
-                  <CardDescription>Ver y gestionar todas las solicitudes de reparación registradas.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <RepairList 
@@ -280,14 +277,32 @@ function AppScreen() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            <TabsContent value="inventory">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-headline">Gestión de Inventario</CardTitle>
+                  <CardDescription>Control de stock de refacciones y componentes.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <InventoryManager 
+                    catalog={catalog}
+                    onAddItem={handleAddItem}
+                    onUpdateItem={handleUpdateItem}
+                    onDeleteItem={handleDeleteItem}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="dashboard">
                 <Dashboard requests={repairRequests} catalog={catalog}/>
             </TabsContent>
+
             <TabsContent value="catalog">
               <Card>
                 <CardHeader>
-                  <CardTitle className="font-headline">Gestionar Catálogos</CardTitle>
-                  <CardDescription>Agrega, edita o elimina elementos de tus catálogos.</CardDescription>
+                  <CardTitle className="font-headline">Configuración de Catálogos</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CatalogManager 
@@ -323,13 +338,12 @@ export default function Home() {
   if (loading || !user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4">
-        <div className="w-full max-w-6xl space-y-8 text-center">
-          <Skeleton className="h-12 w-1/2 mx-auto" />
-          <Skeleton className="h-8 w-3/4 mx-auto" />
-        </div>
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
 
   return <AppScreen />;
 }
+
+import { Loader2 } from 'lucide-react';
