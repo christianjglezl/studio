@@ -2,13 +2,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { HardDrive, Wrench, List, LogOut, LineChart, PackageSearch, Loader2 } from 'lucide-react';
+import { HardDrive, Wrench, List, LogOut, LineChart, PackageSearch, Loader2, Calculator, ShieldCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RepairRequestForm } from '@/components/repair-request-form';
 import { CatalogManager } from '@/components/catalog-manager';
 import { RepairList } from '@/components/repair-list';
 import { InventoryManager } from '@/components/inventory-manager';
+import { QuoteManager } from '@/components/quote-manager';
+import { UnlockManager } from '@/components/unlock-manager';
 import type { Brand, Model, Color, Accessory, Condition, RepairRequest, CatalogData, TermAndCondition, SparePartType, SparePart, Service } from '@/lib/types';
 import { Ticket } from '@/components/ticket';
 import { getCollection, addItem, updateItem, deleteItem, addRepairRequest, getRepairRequests, updateRepairRequestWithDevices } from '@/services/firestore';
@@ -218,7 +220,7 @@ function AppScreen() {
           </header>
           
           <Tabs defaultValue="repair" className="w-full">
-            <TabsList className="h-auto grid grid-cols-2 md:grid-cols-5 gap-1 mb-8">
+            <TabsList className="h-auto grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-1 mb-8">
               <TabsTrigger value="repair">
                 <Wrench className="mr-2 h-4 w-4" />
                 Nueva Reparación
@@ -230,6 +232,14 @@ function AppScreen() {
               <TabsTrigger value="inventory">
                 <PackageSearch className="mr-2 h-4 w-4" />
                 Inventario
+              </TabsTrigger>
+              <TabsTrigger value="quotes">
+                <Calculator className="mr-2 h-4 w-4" />
+                Cotizaciones
+              </TabsTrigger>
+              <TabsTrigger value="unlocks">
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                Desbloqueos
               </TabsTrigger>
               <TabsTrigger value="dashboard">
                   <LineChart className="mr-2 h-4 w-4" />
@@ -287,6 +297,30 @@ function AppScreen() {
                     onUpdateItem={handleUpdateItem}
                     onDeleteItem={handleDeleteItem}
                   />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="quotes">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-headline">Cotizaciones</CardTitle>
+                  <CardDescription>Lista de precios de refacciones por modelo para cotizar reparaciones.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <QuoteManager />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="unlocks">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-headline">Desbloqueos y Liberaciones</CardTitle>
+                  <CardDescription>Consulta el estatus de bloqueo de equipos (iCloud, operador, lista negra) con Server.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <UnlockManager />
                 </CardContent>
               </Card>
             </TabsContent>

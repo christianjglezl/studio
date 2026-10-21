@@ -97,3 +97,36 @@ export interface CatalogData {
   sparePartTypes: SparePartType[];
   spareParts: SparePart[];
 }
+
+export interface QuotePrice {
+  id: string;
+  model: string;
+  partType: string;
+  cost: number;
+}
+
+export interface QuotePricesMetadata {
+  count: number;
+  lastUpdated: string;
+}
+
+export interface SickwService {
+  id: string;
+  serviceId: string;
+  name: string;
+  price?: string;
+  publicPrice?: number;
+}
+
+export interface UnlockCheck {
+  id: string;
+  imei: string;
+  serviceId: string;
+  serviceName: string;
+  status: 'success' | 'error';
+  result: string;
+  price?: string;
+  orderId?: string;
+  checkedBy?: string;
+  createdAt: string;
+}

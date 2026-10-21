@@ -2,3 +2,10 @@
 runConfig:
   maxInstances: 1
   runtime: nodejs22
+
+env:
+  # API key for sickw.com (stored in Cloud Secret Manager, never in the repo)
+  - variable: SICKW_API_KEY
+    secret: SICKW_API_KEY
+    availability:
+      - RUNTIME
