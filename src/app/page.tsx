@@ -2,16 +2,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { HardDrive, Wrench, List, LogOut, LineChart, PackageSearch } from 'lucide-react';
+import { HardDrive, Wrench, List, LogOut, LineChart, PackageSearch, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RepairRequestForm } from '@/components/repair-request-form';
 import { CatalogManager } from '@/components/catalog-manager';
 import { RepairList } from '@/components/repair-list';
 import { InventoryManager } from '@/components/inventory-manager';
-import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, CatalogData, TermAndCondition, SparePartType, SparePart } from '@/lib/types';
+import type { Brand, Model, Color, Accessory, Condition, RepairRequest, CatalogData, TermAndCondition, SparePartType, SparePart, Service } from '@/lib/types';
 import { Ticket } from '@/components/ticket';
-import { getCollection, addItem, updateItem, deleteItem, addRepairRequest, getRepairRequests, updateRepairRequest, updateRepairRequestWithDevices } from '@/services/firestore';
+import { getCollection, addItem, updateItem, deleteItem, addRepairRequest, getRepairRequests, updateRepairRequestWithDevices } from '@/services/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -20,9 +20,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Dashboard } from '@/components/dashboard';
 
-
 const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/techcheck-x5724.firebasestorage.app/o/logoEasy.png?alt=media&token=0fbd7512-4ec8-4b6d-9191-4fad7f472c3e";
-
 
 function AppScreen() {
   const { signOut } = useAuth();
@@ -64,9 +62,8 @@ function AppScreen() {
       console.error("Error fetching catalog data:", error);
       toast({
         title: "Error de Carga de Catálogo",
-        description: `No se pudieron cargar los datos del catálogo. ${error.message}`,
+        description: `No se pudieron cargar los datos del catálogo.`,
         variant: "destructive",
-        duration: 10000,
       });
     }
   }, [toast]);
@@ -82,9 +79,8 @@ function AppScreen() {
         console.error("Error fetching repair requests:", error);
         toast({
           title: "Error al Cargar Reparaciones",
-          description: `No se pudieron cargar las solicitudes de reparación. ${error.message}`,
+          description: `No se pudieron cargar las solicitudes de reparación.`,
           variant: "destructive",
-          duration: 10000,
         });
       } finally {
         setLoading(false);
@@ -93,12 +89,13 @@ function AppScreen() {
     fetchAllData();
   }, [fetchCatalogData, toast]);
 
-
   useEffect(() => {
     if (requestToPrint) {
       setTimeout(() => {
-        window.print();
-        setRequestToPrint(null);
+        if (typeof window !== 'undefined') {
+          window.print();
+          setRequestToPrint(null);
+        }
       }, 100);
     }
   }, [requestToPrint]);
@@ -123,7 +120,7 @@ function AppScreen() {
         handlePrint(fullRequest);
     } catch (error: any) {
         console.error("Error adding repair request:", error);
-        toast({ title: "Error", description: `No se pudo agregar la solicitud: ${error.message}`, variant: "destructive" });
+        toast({ title: "Error", description: `No se pudo agregar la solicitud.`, variant: "destructive" });
     }
   };
 
@@ -132,10 +129,10 @@ function AppScreen() {
         await updateRepairRequestWithDevices(id, data);
         const updatedRequests = await getRepairRequests();
         setRepairRequests(updatedRequests);
-        toast({ title: "Actualizado", description: "La solicitud de reparación se ha actualizado.", variant: "success" });
+        toast({ title: "Actualizado", description: "La solicitud se ha actualizado.", variant: "success" });
       } catch (error: any) {
           console.error("Failed to update repair request:", error)
-          toast({ title: "Error", description: `No se pudo actualizar la solicitud: ${error.message}`, variant: "destructive" });
+          toast({ title: "Error", description: `No se pudo actualizar la solicitud.`, variant: "destructive" });
       }
   }
   
@@ -151,10 +148,10 @@ function AppScreen() {
       const id = await addItem(collectionName, item);
       const newItem = { ...item, id };
       updateCatalogState(collectionName, [...(catalog[collectionName] || []), newItem]);
-      toast({ title: "Agregado", description: "El elemento se ha añadido correctamente.", variant: "success" });
+      toast({ title: "Agregado", description: "Elemento añadido correctamente.", variant: "success" });
     } catch (error: any) {
       console.error("Error adding item:", error);
-      toast({ title: "Error al Guardar", description: `No se pudo añadir el elemento: ${error.message}`, variant: "destructive" });
+      toast({ title: "Error", description: `No se pudo añadir el elemento.`, variant: "destructive" });
     }
   };
   
@@ -163,10 +160,10 @@ function AppScreen() {
       await updateItem(collectionName, id, item);
       const updatedItems = (catalog[collectionName] || []).map((i: any) => i.id === id ? { ...i, ...item } : i)
       updateCatalogState(collectionName, updatedItems);
-      toast({ title: "Actualizado", description: "El elemento se ha actualizado correctamente.", variant: "success" });
+      toast({ title: "Actualizado", description: "Elemento actualizado correctamente.", variant: "success" });
     } catch (error: any) {
       console.error("Error updating item:", error);
-      toast({ title: "Error al Actualizar", description: `No se pudo actualizar el elemento: ${error.message}`, variant: "destructive" });
+      toast({ title: "Error", description: `No se pudo actualizar el elemento.`, variant: "destructive" });
     }
   };
 
@@ -175,13 +172,12 @@ function AppScreen() {
       await deleteItem(collectionName, id);
       const filteredItems = (catalog[collectionName] || []).filter((i: any) => i.id !== id);
       updateCatalogState(collectionName, filteredItems);
-      toast({ title: "Eliminado", description: "El elemento ha sido eliminado.", variant: "success" });
+      toast({ title: "Eliminado", description: "Elemento eliminado.", variant: "success" });
     } catch (error: any) {
       console.error("Error deleting item:", error);
-      toast({ title: "Error al Eliminar", description: `No se pudo eliminar el elemento: ${error.message}`, variant: "destructive" });
+      toast({ title: "Error", description: `No se pudo eliminar el elemento.`, variant: "destructive" });
     }
   };
-
 
   if (loading) {
     return (
@@ -189,7 +185,7 @@ function AppScreen() {
         <div className="w-full max-w-6xl space-y-8">
            <header className="mb-8 flex justify-between items-center">
             <div className="flex items-center gap-3 mb-2">
-              <Image src={LOGO_URL} alt="Easy Tech Logo" width={50} height={50} unoptimized />
+              <Image src={LOGO_URL} alt="Easy Tech Logo" width={50} height={50} />
               <h1 className="text-4xl font-bold font-headline text-primary">Easy Tech</h1>
             </div>
           </header>
@@ -210,7 +206,7 @@ function AppScreen() {
           <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-start gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                 <Image src={LOGO_URL} alt="Easy Tech Logo" width={50} height={50} unoptimized/>
+                 <Image src={LOGO_URL} alt="Easy Tech Logo" width={50} height={50} />
                 <h1 className="text-3xl sm:text-4xl font-bold font-headline text-primary">Easy Tech</h1>
               </div>
               <p className="text-muted-foreground">Gestión de Centro de Reparación de Celulares</p>
@@ -324,7 +320,6 @@ function AppScreen() {
   );
 }
 
-
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -345,5 +340,3 @@ export default function Home() {
 
   return <AppScreen />;
 }
-
-import { Loader2 } from 'lucide-react';

@@ -1,8 +1,8 @@
 
 'use client';
 
-import React from 'react';
-import type { RepairRequest, RepairStatus, Service, CatalogData } from '@/lib/types';
+import React, { useEffect, useState } from 'react';
+import type { RepairRequest, RepairStatus, CatalogData } from '@/lib/types';
 import { repairStatuses } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -40,10 +40,15 @@ const serviceChartColors = [
 
 export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
     const { toast } = useToast();
-    const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
-        from: startOfWeek(new Date(), { weekStartsOn: 1 }),
-        to: endOfWeek(new Date(), { weekStartsOn: 1 }),
-    });
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+    // Initialize dateRange after hydration to avoid mismatch
+    useEffect(() => {
+        setDateRange({
+            from: startOfWeek(new Date(), { weekStartsOn: 1 }),
+            to: endOfWeek(new Date(), { weekStartsOn: 1 }),
+        });
+    }, []);
 
     const handlePendingSearch = () => {
         const pendingRequests = requests.filter(req => req.status !== 'Entregado' && req.status !== 'Entregado (no reparado)');
@@ -78,7 +83,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
 
         const requestsInDateRange = requests.filter(req => isWithinInterval(parseISO(req.createdAt), interval));
         
-        // Calculate income based on cash flow within the date range
         const incomeFromNewRequests = requests
             .filter(req => isWithinInterval(parseISO(req.createdAt), interval))
             .reduce((sum, req) => sum + req.devices.reduce((deviceSum, dev) => deviceSum + (dev.downPayment || 0), 0), 0);
@@ -93,7 +97,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
         
         const totalIncome = incomeFromNewRequests + incomeFromDelivered;
         
-        // Status chart data
         const statusCounts: { [key in RepairStatus]?: number } = {};
         requestsInDateRange.forEach(req => {
             if (req.status) {
@@ -108,7 +111,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
             }))
             .filter(item => item.value > 0);
             
-        // Service chart data for PENDING services
         const serviceCounts: { [key: string]: number } = {};
         requests
             .filter(req => req.status !== 'Listo para Entrega' && req.status !== 'Entregado' && req.status !== 'Entregado (no reparado)')
@@ -155,6 +157,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, catalog }) => {
             </text>
         );
     };
+
+    if (!dateRange) return <div className="p-8 text-center text-muted-foreground">Cargando dashboard...</div>;
 
     return (
         <div className="space-y-6">

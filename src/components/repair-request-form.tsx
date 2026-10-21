@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,13 +33,12 @@ import { useToast } from '@/hooks/use-toast';
 import { PatternLock } from '@/components/pattern-lock';
 import type { Brand, Model, Color, Accessory, Condition, RepairRequest, Service, DeviceInRequest, CatalogData } from '@/lib/types';
 import { useEffect, useState, useMemo } from 'react';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu';
 import { addItem } from '@/services/firestore';
-
 
 const deviceSchema = z.object({
   id: z.string().optional(),
@@ -86,7 +84,6 @@ const formSchema = z.object({
   phoneNumbers: z.array(z.object({ value: z.string().min(10, { message: 'El número de teléfono debe tener 10 dígitos.' }).max(10, { message: 'El número de teléfono debe tener 10 dígitos.' }) })).min(1, { message: 'Se requiere al menos un número de teléfono.' }),
   devices: z.array(deviceSchema).min(1, { message: 'Debes registrar al menos un dispositivo.' }),
 });
-
 
 export type RepairRequestFormValues = z.infer<typeof formSchema>;
 
@@ -424,14 +421,13 @@ const DeviceFormSection: React.FC<{
     );
 };
 
-
 export function RepairRequestForm({ 
   catalog, updateCatalogState,
   onAddRequest, onUpdateRequest, initialData = null, onFormClose
 }: RepairRequestFormProps) {
   const { models } = catalog;
   const { toast } = useToast();
-  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+  const [currentDateTime, setCurrentDateTime] = useState<Date | null>(null);
   const [addingModel, setAddingModel] = useState<{ open: boolean, index: number, brandId: string }>({ open: false, index: -1, brandId: '' });
   const [openDevices, setOpenDevices] = useState<{ [key: number]: boolean }>({0: true});
   
@@ -461,7 +457,7 @@ export function RepairRequestForm({
       form.reset({
         clientName: initialData.clientName,
         phoneNumbers: initialData.phoneNumbers,
-        devices: initialData.devices.map(d => ({...d})), // Create a copy
+        devices: initialData.devices.map(d => ({...d})), 
       });
       const openStates = initialData.devices.reduce((acc, _, index) => {
         acc[index] = true;
@@ -472,12 +468,13 @@ export function RepairRequestForm({
   }, [initialData, isEditing, form]);
 
   useEffect(() => {
+    setCurrentDateTime(new Date());
     const timer = setInterval(() => setCurrentDateTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
   
     useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
+    const subscription = form.watch((value, { name }) => {
       if (name && name.startsWith('devices') && name.includes('serviceCosts')) {
         const deviceIndexMatch = name.match(/devices\.(\d+)\.serviceCosts/);
         if (deviceIndexMatch) {
@@ -494,9 +491,7 @@ export function RepairRequestForm({
     return () => subscription.unsubscribe();
   }, [form]);
 
-
   function onSubmit(data: RepairRequestFormValues) {
-    // Assign temporary client-side IDs for devices before submission if they don't have one
     const devicesWithIds = data.devices.map(d => ({ ...d, id: d.id || crypto.randomUUID() }));
     const finalData = { ...data, devices: devicesWithIds };
     
@@ -585,7 +580,7 @@ export function RepairRequestForm({
       <FormProvider {...form}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            {!isEditing && (
+            {!isEditing && currentDateTime && (
               <div className="flex justify-between items-center p-2 bg-secondary rounded-lg">
                   <div className='flex flex-wrap items-center gap-4'>
                       <div className="flex items-center gap-2 text-sm text-secondary-foreground">
@@ -663,5 +658,3 @@ export function RepairRequestForm({
     </Dialog>
   );
 }
-
-    
